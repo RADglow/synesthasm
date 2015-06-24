@@ -54,14 +54,14 @@ function PatternEngine(opt) {
             return new Date;
         },
         '/total_pixels': function () {
-            return this.strip.getLength();
+            return that.strip.getLength();
         },
         '/pixel_number': function () {
             return this.currentPixelNo;
         }
     };
 
-    this.ExecuteBytecode = function (ins, strips) {
+    this.ExecuteBytecode = function (ins) {
         var that = this;
         $.each(ins, function (index, value) {
             if (value.length != 4) {
