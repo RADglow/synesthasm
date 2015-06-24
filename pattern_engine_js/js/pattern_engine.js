@@ -8,7 +8,7 @@ function PatternEngine(opt) {
     this.strip = opt.strip || {}
     // handle other options...
 
-    this.R = [0, 0, 0, 0, 0, 0, 0, 0];    
+    this.R = [0, 0, 0, 0, 0, 0, 0, 0];
     this.currentPixelNo = 0;
     this.currentInstruction = 0;
 
@@ -61,6 +61,18 @@ function PatternEngine(opt) {
         }
     };
 
+    this.ExecuteBytecode = function (ins, strips) {
+        var that = this;
+        $.each(ins, function (index, value) {
+            if (value.length != 4) {
+                throw new Error('Illegal bytecode: Each instruction should have 4 elements');
+            }
+            if (!(value[0] in that.operations)) {
+                throw new Error('Illegal bytecode: ' + value[0] + ' is not a valid instruction');
+            }
+        })
+        return true;
+    };
 
 }
 
