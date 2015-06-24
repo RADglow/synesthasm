@@ -33,7 +33,7 @@ function PatternEngine(opt) {
         },
         'MOVC': function (dest, c, unused) {
             if (c == 'MAXINT32') {
-                c = 2 ^ 32;
+                c = Math.pow(2, 32);
             }
             that.R[dest] = c;
         },
