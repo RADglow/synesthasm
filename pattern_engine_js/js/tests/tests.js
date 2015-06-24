@@ -14,3 +14,13 @@ QUnit.test("Test legal instruction", function (assert) {
         'A legal instruction can be parsed'
     );
 });
+
+QUnit.test("Test MOVC", function (assert) {
+    var engine = PatternEngine();
+    engine.ExecuteBytecode([["MOVC", 0, 100, 0]], null);
+    assert.deepEqual(
+        engine.R,
+        [100,0,0,0,0,0,0,0],
+        'MOVC loads a constant correctly'
+    );
+});

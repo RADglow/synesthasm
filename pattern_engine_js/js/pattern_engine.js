@@ -11,37 +11,37 @@ function PatternEngine(opt) {
     this.R = [0, 0, 0, 0, 0, 0, 0, 0];
     this.currentPixelNo = 0;
     this.currentInstruction = 0;
-
+    var that = this;
     this.operations = {
         'ADD': function (dest, n, m) {
-            this.R[dest] = this.R[n] + this.R[m];
+            that.R[dest] = that.R[n] + that.R[m];
         },
         'SUB': function (dest, n, m) {
-            this.R[dest] = this.R[n] - this.R[m];
+            that.R[dest] = that.R[n] - that.R[m];
         },
         'MUL': function (dest, n, m) {
-            this.R[dest] = this.R[n] * this.R[m];
+            that.R[dest] = that.R[n] * that.R[m];
         },
         'DIV': function (dest, n, m) {
-            this.R[dest] = this.R[n] / this.R[m];
+            that.R[dest] = that.R[n] / that.R[m];
         },
         'SUB': function (dest, n, m) {
-            this.R[dest] = this.R[n] - this.R[m];
+            that.R[dest] = that.R[n] - that.R[m];
         },
         'MOD': function (dest, n, m) {
-            this.R[dest] = this.R[n] % this.R[m];
+            that.R[dest] = that.R[n] % that.R[m];
         },
         'MOVC': function (dest, c, unused) {
             if (c == 'MAXINT32') {
                 c = 2 ^ 32;
             }
-            this.R[dest] = c;
+            that.R[dest] = c;
         },
         'LOAD': function (dest, ioAddr, unused) {
-            this.R[dest] = this.ioAddrs[ioAddr]();
+            that.R[dest] = that.ioAddrs[ioAddr]();
         },
         'WHSL': function (hue, saturation, lightness) {
-            this.strip.setPixel(this.currentPixelNo, jQuery.Color({
+            that.strip.setPixel(that.currentPixelNo, jQuery.Color({
                 hue: hue,
                 saturation: saturation,
                 lightness: lightness
@@ -70,6 +70,7 @@ function PatternEngine(opt) {
             if (!(value[0] in that.operations)) {
                 throw new Error('Illegal bytecode: ' + value[0] + ' is not a valid instruction');
             }
+            that.operations[value[0]](value[1], value[2], value[3]);
         })
         return true;
     };
