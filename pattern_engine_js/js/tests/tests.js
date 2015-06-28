@@ -20,53 +20,6 @@ QUnit.test("Test illegal instruction format", function (assert) {
     );
 });
 
-QUnit.test("Test legal instruction", function (assert) {
-    assert.ok(
-        PatternEngine().ExecuteBytecode(
-            PatternEngine().Assemble([["MOVC", 0, 100, 0]])),
-        'A legal instruction can be parsed'
-    );
-});
-
-QUnit.test("Test MOVC", function (assert) {
-    var engine = PatternEngine();
-    engine.ExecuteBytecode([["MOVC", 0, 100, 0]]);
-    assert.deepEqual(
-        engine.R,
-        [100, 0, 0, 0, 0, 0, 0, 0],
-        'MOVC loads a constant correctly'
-    );
-});
-
-QUnit.test("Test MOVC with maxint", function (assert) {
-    var engine = PatternEngine();
-    engine.ExecuteBytecode([["MOVC", 0, 'MAXINT32', 0]]);
-    assert.deepEqual(
-        engine.R,
-        [4294967296, 0, 0, 0, 0, 0, 0, 0],
-        'MOVC loads MAXINT32'
-    );
-});
-
-QUnit.test("Test LOAD total pixels", function (assert) {
-    var pixels = 100;
-    var strip = function FakeStrip() {
-        if (!(this instanceof FakeStrip))
-            return new FakeStrip;
-
-        this.getLength = function () {
-            return pixels;
-        }
-    }
-    var engine = PatternEngine({ strip: strip() });
-    engine.ExecuteBytecode([["LOAD", 0, '/total_pixels', 0]]);
-    assert.deepEqual(
-        engine.R,
-        [pixels, 0, 0, 0, 0, 0, 0, 0],
-        'LOAD loads total pixels'
-    );
-});
-
 QUnit.test("Test assemble simple add returns 4 bytes", function (assert) {
     var engine = PatternEngine();
 

@@ -32,33 +32,57 @@ function PatternEngine(opt) {
 
     }
     this.operations = {
-        'ADD': function (dest, n, m) {
-            that.R[dest] = n + m;
+        'ADD': {
+            opcode: 0,
+            fn: function (dest, n, m) {
+                that.R[dest] = n + m;
+            }
         },
-        'SUB': function (dest, n, m) {
-            that.R[dest] = n - m;
+        'SUB': {
+            opcode: 1,
+            fn: function (dest, n, m) {
+                that.R[dest] = n - m;
+            }
         },
-        'MUL': function (dest, n, m) {
-            that.R[dest] = n * m;
+        'MUL': {
+            opcode: 2,
+            fn: function (dest, n, m) {
+                that.R[dest] = n * m;
+            }
         },
-        'DIV': function (dest, n, m) {
-            that.R[dest] = n / m;
+        'DIV': {
+            opcode: 3,
+            fn: function (dest, n, m) {
+                that.R[dest] = n / m;
+            }
         },
-        'MOD': function (dest, n, m) {
-            that.R[dest] = n % m;
+        'MOD': {
+            opcode: 4,
+            fn: function (dest, n, m) {
+                that.R[dest] = n % m;
+            }
         },
-        'MOV': function (dest, n, m) {
-            that.R[dest] = m;
+        'MOV': {
+            opcode: 5,
+            fn: function (dest, n, m) {
+                that.R[dest] = m;
+            }
         },
-        'LOAD': function (dest, ioAddr, unused) {
-            that.R[dest] = that.ioAddrs[ioAddr]();
+        'LOAD': {
+            opcode: 6,
+            fn: function (dest, ioAddr, unused) {
+                that.R[dest] = that.ioAddrs[ioAddr]();
+            }
         },
-        'WHSL': function (hue, saturation, lightness) {
-            that.strip.setPixel(that.currentPixelNo, jQuery.Color({
-                hue: hue,
-                saturation: saturation,
-                lightness: lightness
-            }))
+        'WHSL': {
+            opcode: 7,
+            fn: function (hue, saturation, lightness) {
+                that.strip.setPixel(that.currentPixelNo, jQuery.Color({
+                    hue: hue,
+                    saturation: saturation,
+                    lightness: lightness
+                }))
+            }
         }
     };
 
@@ -73,18 +97,25 @@ function PatternEngine(opt) {
             return this.currentPixelNo;
         }
     };
-
+    /**
     this.opcode_map = {
         0b0000: that.operations.ADD,
         0b0001: that.operations.SUB,
         0b0010: that.operations.MOV,
     };
-
     this.symbol_map = {
-        'ADD': 0b0000,
-        'SUB': 0b0001,
-        'MOV': 0b0010,
+        'ADD': that.operations.ADD.opcode,
+        'SUB': that.operations.SUB.opcode,
+        'MOV': that.operations.MOV.opcode,
     };
+
+    **/
+    this.opcode_map = {};
+    this.symbol_map = {};
+    $.each(that.operations, function (index, value) {
+        that.opcode_map[value.opcode] = value.fn;
+        that.symbol_map[index] = value.opcode
+    });
 
     this.Assemble = function (ins) {
         var INS_LENGTH_BYTES = 4
