@@ -1,11 +1,11 @@
 function PatternEngine(opt) {
     //hide "new"
     if (!(this instanceof PatternEngine))
-        return new PatternEngine(opt)
+        return new PatternEngine(opt);
     //make params optional
-    opt = opt || {}
+    opt = opt || {};
 
-    this.strip = opt.strip || {}
+    this.strip = opt.strip || {};
     // handle other options...
 
     this.R = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -14,23 +14,23 @@ function PatternEngine(opt) {
     var that = this;
     this.getOp2Value = function (m, locmask) {
         switch (locmask) {
-            case 0b000:
+            case 0:
                 return that.R[m];
-                break;
-            case 0b001:
+            case 1:
                 return m;
-                break;
             default:
                 throw new Error('Locmask ' + locmask + ' undefined');
-        };
+        }
     };
+
     this.executeDSR = function (fn, dest, n, m, locmask, updateCond) {
         fn(dest, that.R[n], that.getOp2Value(m, locmask));
         if (updateCond) {
             // Update conditionals
         }
 
-    }
+    };
+
     this.operations = {
         'ADD': {
             opcode: 0,
@@ -81,14 +81,14 @@ function PatternEngine(opt) {
                     hue: hue,
                     saturation: saturation,
                     lightness: lightness
-                }))
+                }));
             }
         }
     };
 
     this.ioAddrs = {
         '/ticks': function () {
-            return new Date;
+            return new Date();
         },
         '/total_pixels': function () {
             return that.strip.getLength();
@@ -114,11 +114,11 @@ function PatternEngine(opt) {
     this.symbol_map = {};
     $.each(that.operations, function (index, value) {
         that.opcode_map[value.opcode] = value.fn;
-        that.symbol_map[index] = value.opcode
+        that.symbol_map[index] = value.opcode;
     });
 
     this.Assemble = function (ins) {
-        var INS_LENGTH_BYTES = 4
+        var INS_LENGTH_BYTES = 4;
         var bytecode = [];
         $.each(ins, function (index, value) {
             if (value.length != 4) {
@@ -131,39 +131,40 @@ function PatternEngine(opt) {
             if (!(value[0] in that.symbol_map)) {
                 throw new Error('Illegal bytecode: ' + value[0] + ' is not a valid instruction');
             }
-            var conditional = 0b0000 << 28;
+            var conditional = 0 << 28;
             var opcode = that.symbol_map[value[0]] << 21;
             var S = updateConditionals ? 1 < 20 : 0;
             var immediate = 0;
             var Rd = value[1] << 12;
             var Rn = value[2] << 16;
             var Rs = value[3];
+            var opcode2 = Rs;
             if (typeof (Rs) == 'string') {
-                opcode2 = parseInt(Rs);
+                opcode2 = parseInt(Rs, 10);
                 immediate = 1 << 25;
             }
-            var opcode2 = Rs;
+
             bytecode.push(conditional | immediate | opcode | S | Rn | Rd | opcode2);
             bytecode.push();
-        })
+        });
         return bytecode;
     };
 
     this.ExecuteBytecode = function (ins) {
         var mask = function (value, mask) {
-            return (value & mask) == mask
+            return (value & mask) == mask;
         };
 
         var getVal = function (value, start, end) {
-            return (value >> end) & ~(~0 << (start - end + 1))
-        }
+            return (value >> end) & ~(~0 << (start - end + 1));
+        };
 
         var that = this;
         $.each(ins, function (index, value) {
             if ((value >> 0) != value) {
                 throw new Error('Illegal bytecode: Each instruction should be less than 32 bits');
             }
-            if (getVal(value, 27, 26) == 0b00) {
+            if (getVal(value, 27, 26) === 0) {
                 // Data store operation
                 /**
                 * 31-28: conditional
@@ -185,11 +186,11 @@ function PatternEngine(opt) {
                     var rot = getVal(value, 11, 8);
                     var imm = getVal(value, 7, 0);
                     var val = imm << rot;
-                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, val, 0b001, updateConditionals);
+                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, val, 1, updateConditionals);
 
                 } else {
                     var regnum = getVal(value, 3, 0);
-                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, regnum, 0b000, updateConditionals);
+                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, regnum, 0, updateConditionals);
                 }
 
             } else {
@@ -197,10 +198,10 @@ function PatternEngine(opt) {
             }
 
             //that.operations[value[0]](value[1], value[2], value[3]);
-        })
+        });
         return true;
     };
 
 }
 
-module.exports = PatternEngine
+module.exports = PatternEngine;
