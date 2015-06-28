@@ -30,7 +30,7 @@ QUnit.test("Test MOVC", function (assert) {
     engine.ExecuteBytecode([["MOVC", 0, 100, 0]]);
     assert.deepEqual(
         engine.R,
-        [100,0,0,0,0,0,0,0],
+        [100, 0, 0, 0, 0, 0, 0, 0],
         'MOVC loads a constant correctly'
     );
 });
@@ -61,5 +61,28 @@ QUnit.test("Test LOAD total pixels", function (assert) {
         engine.R,
         [pixels, 0, 0, 0, 0, 0, 0, 0],
         'LOAD loads total pixels'
+    );
+});
+
+QUnit.test("Test assemble simple add returns 4 bytes", function (assert) {
+    var engine = PatternEngine();
+
+    var bytecode = engine.Assemble([["ADD", 0, 1, 2]]);
+    assert.equal(
+        bytecode.length,
+        1,
+        'Simple ADD assembles to 1 32 bit number'
+    );
+});
+
+QUnit.test("Test assemble simple add returns CORRECT 4 bytes", function (assert) {
+    var engine = PatternEngine();
+
+    var bytecode = engine.Assemble([["ADD", 0, 1, 2]]);
+
+    assert.deepEqual(
+        bytecode,
+        [0b00000010000000010000000000000010],
+        'Simple ADD assembles to 00000010000000010000000000000010'
     );
 });

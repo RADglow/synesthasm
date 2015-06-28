@@ -61,6 +61,37 @@ function PatternEngine(opt) {
         }
     };
 
+    this.opcode_map = {
+        0b0000: that.operations.ADD,
+        0b0001: that.operations.SUB,
+    };
+
+    this.symbol_map = {
+        'ADD': 0b0000,
+        'SUB': 0b0001,
+    };
+
+    this.Assemble = function (ins) {
+        var INS_LENGTH_BYTES = 4
+        var bytecode = [];
+        $.each(ins, function (index, value) {
+            if (value.length != 4) {
+                throw new Error('Illegal bytecode: Each instruction should have 4 elements');
+            }
+            if (!(value[0] in that.symbol_map)) {
+                throw new Error('Illegal bytecode: ' + value[0] + ' is not a valid instruction');
+            }
+            var conditional = 0b0000;
+            var opcode = that.symbol_map[value[0]];
+            var Rd = value[1];
+            var Rn = value[2];
+            var Rs = value[3];
+            bytecode.push(conditional << 28 | 0b1 << 25 | opcode << 21 | Rn << 16 | Rd << 12 | Rs);
+            bytecode.push();
+        })
+        return bytecode;
+    };
+
     this.ExecuteBytecode = function (ins) {
         var that = this;
         $.each(ins, function (index, value) {
