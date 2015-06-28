@@ -95,8 +95,8 @@ function PatternEngine(opt) {
     this.ExecuteBytecode = function (ins) {
         var that = this;
         $.each(ins, function (index, value) {
-            if (value.length != 4) {
-                throw new Error('Illegal bytecode: Each instruction should have 4 elements');
+            if ((value >> 0) != value) {
+                throw new Error('Illegal bytecode: Each instruction should be less than 32 bits');
             }
             if (!(value[0] in that.operations)) {
                 throw new Error('Illegal bytecode: ' + value[0] + ' is not a valid instruction');
