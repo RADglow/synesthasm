@@ -24,10 +24,17 @@ function PatternEngine(opt) {
     };
 
     this.executeDSR = function (fn, dest, n, m, locmask, updateCond) {
-        fn(dest, that.R[n], that.getOp2Value(m, locmask));
+        var rtn = fn(that.R[n], that.getOp2Value(m, locmask));
+
         if (updateCond) {
             // Update conditionals
+            var n = rtn < 0 ? 1 : 0;
+            var z = rtn === 0 ? 1 : 0;
+            var c = rtn > 2 ^ 32 ? 1 : 0;
+            var v = rtn > 0x7fffffff ? 1 : 0;
+            this.psr = n << 31 | z << 30 | c << 29 | v << 28;
         }
+        that.R[dest] = rtn;
 
     };
 
@@ -35,43 +42,43 @@ function PatternEngine(opt) {
         'ADD': {
             opcode: 0,
             fn: function (dest, n, m) {
-                that.R[dest] = n + m;
+                return n + m;
             }
         },
         'SUB': {
             opcode: 1,
             fn: function (dest, n, m) {
-                that.R[dest] = n - m;
+                return n - m;
             }
         },
         'MUL': {
             opcode: 2,
             fn: function (dest, n, m) {
-                that.R[dest] = n * m;
+                return n * m;
             }
         },
         'DIV': {
             opcode: 3,
             fn: function (dest, n, m) {
-                that.R[dest] = n / m;
+                return n / m;
             }
         },
         'MOD': {
             opcode: 4,
             fn: function (dest, n, m) {
-                that.R[dest] = n % m;
+                return n % m;
             }
         },
         'MOV': {
             opcode: 5,
             fn: function (dest, n, m) {
-                that.R[dest] = m;
+                return m;
             }
         },
         'LOAD': {
             opcode: 6,
             fn: function (dest, ioAddr, unused) {
-                that.R[dest] = that.ioAddrs[ioAddr]();
+                return that.ioAddrs[ioAddr]();
             }
         },
         'WHSL': {
@@ -97,21 +104,11 @@ function PatternEngine(opt) {
             return this.currentPixelNo;
         }
     };
-    /**
-    this.opcode_map = {
-        0b0000: that.operations.ADD,
-        0b0001: that.operations.SUB,
-        0b0010: that.operations.MOV,
-    };
-    this.symbol_map = {
-        'ADD': that.operations.ADD.opcode,
-        'SUB': that.operations.SUB.opcode,
-        'MOV': that.operations.MOV.opcode,
-    };
 
-    **/
     this.opcode_map = {};
     this.symbol_map = {};
+
+    // Build efficient datastructures for traversing opcodes and symbols
     $.each(that.operations, function (index, value) {
         that.opcode_map[value.opcode] = value.fn;
         that.symbol_map[index] = value.opcode;
