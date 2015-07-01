@@ -12,6 +12,7 @@ function PatternEngine(opt) {
     this.psr = 0;
 
     var that = this;
+
     this.getOp2Value = function (m, locmask) {
         switch (locmask) {
             case 0:
@@ -23,7 +24,15 @@ function PatternEngine(opt) {
         }
     };
 
-    this.executeDSR = function (fn, dest, n, m, locmask, updateCond) {
+    this.mask = function (value, mask) {
+            return (value & mask) == mask;
+        };
+
+    this.getVal = function (value, start, end) {
+            return (value >> end) & ~(~0 << (start - end + 1));
+        };
+
+    this.executeDSR = function (fn, dest, n, m, locmask, updateCond, condSuffix) {
         var rtn = fn(that.R[n], that.getOp2Value(m, locmask));
         var nCond = (rtn & -0x80000000) === -0x80000000 ? 1 : 0;
         var zCond = rtn === 0 ? 1 : 0;
@@ -41,6 +50,7 @@ function PatternEngine(opt) {
         that.R[dest] = rtn;
 
     };
+
 
     this.operations = {
         'ADD': {
@@ -109,14 +119,148 @@ function PatternEngine(opt) {
         }
     };
 
+    // 31 30 29 28
+    // N  Z  C  V
+    var N = 1 << 31;
+    var Z = 1 << 30;
+    var C = 1 << 29;
+    var V = 1 << 28;
+
+    var testCondSet = function(cond) {
+        return that.mask(that.psr, cond);
+    };
+
+    var testCondClear = function(cond) {
+        return !(testCondSet(cond));
+    };
+
+    this.conditionals = {
+        'EQ': {
+            condCode: 0,
+            fn: function() { return testCondSet(Z); }
+        },
+        'NE': {
+            condCode: 1,
+            fn: function() { return testCondClear(Z); }
+        },
+        'CS': {
+            condCode: 2,
+            fn: function() { return testCondSet(C); }
+        },
+        'CC': {
+            condCode: 3,
+            fn: function() { return testCondClear(C); }
+        },
+        'MI': {
+            condCode: 4,
+            fn: function() { return testCondSet(N); }
+        },
+        'PL': {
+            condCode: 5,
+            fn: function() { return testCondClear(N); }
+        },
+        'VS': {
+            condCode: 6,
+            fn: function() { return testCondSet(V); }
+        },
+        'VC': {
+            condCode: 7,
+            fn: function() { return testCondClear(V); }
+        },
+        'HI': {
+            condCode: 8,
+            fn: function() {
+                return testCondSet(C) & testCondClear(Z);
+            }
+        },
+        'LS': {
+            condCode: 9,
+            fn: function() {
+                return testCondClear(C) | testCondSet(Z);
+            }
+        },
+        'GE': {
+            condCode: 10,
+            fn: function() {
+                return (
+                    (testCondSet(N) & testCondSet(V)) |
+                    (testCondClear(N) & testCondClear(V))
+                );
+            }
+        },
+        'LT': {
+            condCode: 11,
+            fn: function() {
+                return (
+                    (testCondSet(N) & testCondClear(V)) |
+                    (testCondClear(N) & testCondSet(V))
+                );
+            }
+        },
+        'GT': {
+            condCode: 12,
+            fn: function() {
+                return (
+                    testCondClear(Z) &
+                    (testCondSet(N) & testCondSet(V)) |
+                    (testCondClear(N) & testCondSet(V))
+                );
+            }
+        },
+        'LE': {
+            condCode: 13,
+            fn: function() {
+                return (
+                    testCondSet(Z) |
+                    (testCondSet(N) & testCondClear(V)) |
+                    (testCondClear(N) & testCondSet(V))
+                );
+            }
+        },
+        'AL': {
+            condCode: 14,
+            fn: function() {
+                return true;
+            }
+        },
+        'NV': {
+            condCode: 15,
+            fn: function() {
+                return false;
+            }
+        }
+    };
+
     this.opcode_map = {};
     this.symbol_map = {};
+    this.condcode_map = {};
+    this.condsymbol_map = {};
+
 
     // Build efficient datastructures for traversing opcodes and symbols
     $.each(that.operations, function (index, value) {
+        if (value.opcode in that.opcode_map) {
+            throw new Error('Opcode ' + value.opcode + ' already defined');
+        }
+        if (index in that.symbol_map) {
+            throw new Error('Symbol ' + index + ' already defined');
+        }
         that.opcode_map[value.opcode] = value.fn;
         that.symbol_map[index] = value.opcode;
     });
+
+    // Build efficient datastructures for traversing conditionals
+    $.each(that.conditionals, function (index, value) {
+        if (value.condCode in that.condcode_map) {
+            throw new Error('Condition code ' + value.condCode + ' already defined');
+        }
+        if (index in that.condsymbol_map) {
+            throw new Error('Conditional symbol ' + index + ' already defined');
+        }
+        that.condcode_map[value.condcode] = value.fn;
+        that.condsymbol_map[index] = value.condCode;
+    });
+
 
     this.Assemble = function (ins) {
         var INS_LENGTH_BYTES = 4;
@@ -153,15 +297,8 @@ function PatternEngine(opt) {
     };
 
     this.ExecuteBytecode = function (ins) {
-        var mask = function (value, mask) {
-            return (value & mask) == mask;
-        };
-
-        var getVal = function (value, start, end) {
-            return (value >> end) & ~(~0 << (start - end + 1));
-        };
-
         var that = this;
+        var getVal = that.getVal;
         $.each(ins, function (index, value) {
             if ((value >> 0) != value) {
                 throw new Error('Illegal bytecode: Each instruction should be less than 32 bits');
