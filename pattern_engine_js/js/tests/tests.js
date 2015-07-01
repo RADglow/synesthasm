@@ -85,3 +85,18 @@ QUnit.test("Test execute SUBS bytecode with PSR update sets Z", function (assert
     engine.ExecuteBytecode(bytecode);
     assert.equal(engine.psr, 1 << 30);
 });
+
+QUnit.test("Test execute ADDS bytecode overflows correctly", function (assert) {
+    var engine = PatternEngine();
+    engine.R = [0, Math.pow(2, 31) - 1, 2, 0, 0, 0, 0, 0];
+    var bytecode = engine.Assemble(
+        [["ADDS", 0, 1, 2]])
+    engine.ExecuteBytecode(bytecode);
+    assert.equal(engine.psr, 1 << 31 | 1 << 29 | 1 << 28);
+    assert.deepEqual(
+        engine.R,
+        [1, Math.pow(2, 31) - 1, 2, 0, 0, 0, 0, 0],
+        'ADDS overflows correctly'
+    );
+});
+

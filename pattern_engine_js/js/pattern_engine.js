@@ -25,13 +25,17 @@ function PatternEngine(opt) {
 
     this.executeDSR = function (fn, dest, n, m, locmask, updateCond) {
         var rtn = fn(that.R[n], that.getOp2Value(m, locmask));
+        var nCond = (rtn & -0x80000000) === -0x80000000 ? 1 : 0;
+        var zCond = rtn === 0 ? 1 : 0;
+        var cCond = rtn > (Math.pow(2,31) - 1) ? 1 : 0;
+        var vCond = rtn > 0x7fffffff ? 1 : 0;
+           
+        if (cCond === 1) {            
+            rtn = rtn - Math.pow(2, 31);
+        }
 
         if (updateCond) {
             // Update conditionals
-            var nCond = (rtn & -0x80000000) === -0x80000000 ? 1 : 0;
-            var zCond = rtn === 0 ? 1 : 0;
-            var cCond = rtn > (2 ^ 32) ? 1 : 0;
-            var vCond = rtn > 0x7fffffff ? 1 : 0;
             this.psr = nCond << 31 | zCond << 30 | cCond << 29 | vCond << 28;
         }
         that.R[dest] = rtn;
