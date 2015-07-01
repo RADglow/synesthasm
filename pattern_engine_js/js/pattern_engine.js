@@ -28,11 +28,11 @@ function PatternEngine(opt) {
 
         if (updateCond) {
             // Update conditionals
-            var n = rtn < 0 ? 1 : 0;
-            var z = rtn === 0 ? 1 : 0;
-            var c = rtn > 2 ^ 32 ? 1 : 0;
-            var v = rtn > 0x7fffffff ? 1 : 0;
-            this.psr = n << 31 | z << 30 | c << 29 | v << 28;
+            var nCond = (rtn & -0x80000000) === -0x80000000 ? 1 : 0;
+            var zCond = rtn === 0 ? 1 : 0;
+            var cCond = rtn > (2 ^ 32) ? 1 : 0;
+            var vCond = rtn > 0x7fffffff ? 1 : 0;
+            this.psr = nCond << 31 | zCond << 30 | cCond << 29 | vCond << 28;
         }
         that.R[dest] = rtn;
 
@@ -41,43 +41,43 @@ function PatternEngine(opt) {
     this.operations = {
         'ADD': {
             opcode: 0,
-            fn: function (dest, n, m) {
+            fn: function (n, m) {
                 return n + m;
             }
         },
         'SUB': {
             opcode: 1,
-            fn: function (dest, n, m) {
+            fn: function (n, m) {
                 return n - m;
             }
         },
         'MUL': {
             opcode: 2,
-            fn: function (dest, n, m) {
+            fn: function (n, m) {
                 return n * m;
             }
         },
         'DIV': {
             opcode: 3,
-            fn: function (dest, n, m) {
+            fn: function (n, m) {
                 return n / m;
             }
         },
         'MOD': {
             opcode: 4,
-            fn: function (dest, n, m) {
+            fn: function (n, m) {
                 return n % m;
             }
         },
         'MOV': {
             opcode: 5,
-            fn: function (dest, n, m) {
+            fn: function (n, m) {
                 return m;
             }
         },
         'LOAD': {
             opcode: 6,
-            fn: function (dest, ioAddr, unused) {
+            fn: function (ioAddr, unused) {
                 return that.ioAddrs[ioAddr]();
             }
         },
@@ -124,13 +124,14 @@ function PatternEngine(opt) {
             var updateConditionals = false;
             if (value[0].substring(value[0].length - 1, value[0].length) == 'S') {
                 updateConditionals = true;
+                value[0] = value[0].substring(0, value[0].length - 1);
             }
             if (!(value[0] in that.symbol_map)) {
                 throw new Error('Illegal bytecode: ' + value[0] + ' is not a valid instruction');
             }
             var conditional = 0 << 28;
             var opcode = that.symbol_map[value[0]] << 21;
-            var S = updateConditionals ? 1 < 20 : 0;
+            var S = updateConditionals ? 1 << 20 : 0;
             var immediate = 0;
             var Rd = value[1] << 12;
             var Rn = value[2] << 16;
@@ -160,7 +161,7 @@ function PatternEngine(opt) {
         $.each(ins, function (index, value) {
             if ((value >> 0) != value) {
                 throw new Error('Illegal bytecode: Each instruction should be less than 32 bits');
-            }
+            }            
             if (getVal(value, 27, 26) === 0) {
                 // Data store operation
                 /**

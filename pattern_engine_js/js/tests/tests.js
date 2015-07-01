@@ -46,9 +46,9 @@ QUnit.test("Test assemble simple add returns CORRECT 4 bytes", function (assert)
 QUnit.test("Test execute ADD bytecode with register arg", function (assert) {
     var engine = PatternEngine();
     engine.R = [0, 10, 20, 0, 0, 0, 0, 0];
-    engine.ExecuteBytecode(
-        engine.Assemble(
-        [["ADD", 0, 1, 2]]));
+    var bytecode = engine.Assemble(
+        [["ADD", 0, 1, 2]])
+    engine.ExecuteBytecode(bytecode);
     assert.deepEqual(
         engine.R,
         [30, 10, 20, 0, 0, 0, 0, 0],
@@ -66,4 +66,22 @@ QUnit.test("Test execute MOV bytecode with an immediate", function (assert) {
         [245, 0, 0, 0, 0, 0, 0, 0],
         'MOV 0 0 \'245\' puts 245 in register 0'
     );
+});
+
+QUnit.test("Test execute SUBS bytecode with PSR update sets N", function (assert) {
+    var engine = PatternEngine();
+    engine.R = [0, 10, 20, 0, 0, 0, 0, 0];
+    var bytecode = engine.Assemble(
+        [["SUBS", 0, 1, 2]])
+    engine.ExecuteBytecode(bytecode);
+    assert.equal(engine.psr, 1 << 31);
+});
+
+QUnit.test("Test execute SUBS bytecode with PSR update sets Z", function (assert) {
+    var engine = PatternEngine();
+    engine.R = [0, 10, 10, 0, 0, 0, 0, 0];
+    var bytecode = engine.Assemble(
+        [["SUBS", 0, 1, 2]])
+    engine.ExecuteBytecode(bytecode);
+    assert.equal(engine.psr, 1 << 30);
 });
