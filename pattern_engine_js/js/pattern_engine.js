@@ -277,7 +277,12 @@ function PatternEngine(opt) {
             if (!(value[0] in that.symbol_map)) {
                 throw new Error('Illegal bytecode: ' + value[0] + ' is not a valid instruction');
             }
-            var conditional = 0 << 28;
+            var rightTwo = value[0].substring(value[0].length - 2, value[0].length);
+            var conditional = 0;
+            if (rightTwo in that.condsymbol_map) {
+                conditional = that.condsymbol_map[rightTwo] << 27;
+                value[0] = value[0].substring(0, value[0].length - 2);
+            }
             var opcode = that.symbol_map[value[0]] << 21;
             var S = updateConditionals ? 1 << 20 : 0;
             var immediate = 0;
