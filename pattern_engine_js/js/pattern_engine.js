@@ -330,11 +330,11 @@ function PatternEngine(opt) {
                     var rot = getVal(value, 11, 8);
                     var imm = getVal(value, 7, 0);
                     var val = imm << rot;
-                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, val, 1, updateConditionals);
+                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, val, 1, updateConditionals, cond);
 
                 } else {
                     var regnum = getVal(value, 3, 0);
-                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, regnum, 0, updateConditionals);
+                    that.executeDSR(that.opcode_map[opcode], Rd, Rn, regnum, 0, updateConditionals, cond);
                 }
 
             } else {
