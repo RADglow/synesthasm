@@ -48,7 +48,7 @@
             <tr>
                 <th ng-repeat="bit in bits">{{bit}}</th>
             </tr>
-            <tr ng-repeat="b in progData.bytecodeOutput" ng-class="{'selected': progData.currentLine == $index }">
+            <tr ng-repeat="b in progData.bytecodeOutput track by $index" ng-class="{'selected': progData.currentLine == $index }">
                 <td ng-repeat="bit in bits">
                     {{b | getbit:bit}}
                 </td>
