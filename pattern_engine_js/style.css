@@ -8,32 +8,36 @@
     color: white;
 }
 
+table {
+	border: 1px solid #000;
+	border-collapse: separate;
+	table-layout: fixed;
+    font-family: monospace;
+    text-align: left;
+}
+
+th, td {
+	border: solid 1px;   
+}
+
 .binaryViewer table {
-	border: 1px solid #000;
-	border-collapse: separate;
-	table-layout: fixed;
-    width: 800px;
-    font-family: monospace;
+	width: 800px;
+    
 }
-.binaryViewer table th, .binaryViewer table td {
-    border: solid 1px;
-    text-align: left;
+.selected {
+	background-color: yellow;
 }
-
 .tokenizedOutput table {
-	border: 1px solid #000;
-	border-collapse: separate;
-	table-layout: fixed;
     width: 200px;
-    font-family: monospace;
 }
 
-.tokenizedOutput table th, .tokenizedOutput table td {
-    border: solid 1px;
-    text-align: left;
-}
 
 .binaryViewer, .tokenizedOutput {
 	float: left;
+	margin: 0 0 20px 20px;
+}
+
+.bytecodeMachine {
+	clear: both;
 	margin: 0 0 20px 20px;
 }

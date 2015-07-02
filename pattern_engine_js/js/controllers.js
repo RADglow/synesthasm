@@ -131,7 +131,8 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
     $scope.progData = {
         asmInput: 'MOV 0 #1 0',
         bytecodeOutput: 0,
-        ins: []
+        ins: [],
+        currentLine: 0
     }
 
     $scope.bits = [];
@@ -147,6 +148,20 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
         $scope.progData.ins = $scope.engine.Tokenize($scope.progData.asmInput);
         $scope.progData.bytecodeOutput = $scope.engine.Assemble($scope.progData.ins);
     }
+
+    $scope.reboot = function () {
+        $scope.engine = PatternEngine();
+        $scope.progData.currentLine = 0;
+    }
+
+    $scope.step = function () {
+        var line = $scope.progData.currentLine;
+        var bytecode = $scope.progData.bytecodeOutput[line];
+        $scope.engine.ExecuteBytecode([bytecode]);
+        $scope.progData.currentLine++;
+    }
+
+
 
 });
 

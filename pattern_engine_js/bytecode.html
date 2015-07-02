@@ -20,9 +20,12 @@
             </div>            
             <div class="buttons">
                 <input type="button" value="Assemble" ng-click="assemble()"/>
+                <input type="button" value="Reboot" ng-click="reboot()"/>
+                <input type="button" value="Step" ng-click="step()"/>
             </div>
         </form>
         <div class="tokenizedOutput">
+            <div class="desc">Assembly input tokenized</div>
                 <table>
                     <tr>
                         <th>INS</th>
@@ -39,15 +42,30 @@
                 </table>
             </div>
         <div class="binaryViewer" title="binary machine code">
+
+            <div class="desc">Bytecode binary output</div>
         <table class="bits">
             <tr>
                 <th ng-repeat="bit in bits">{{bit}}</th>
             </tr>
-            <tr ng-repeat="b in progData.bytecodeOutput">
+            <tr ng-repeat="b in progData.bytecodeOutput" ng-class="{'selected': progData.currentLine == $index }">
                 <td ng-repeat="bit in bits">
                     {{b | getbit:bit}}
                 </td>
             </tr>
+        </table>
+
+        </div>
+        <div class="bytecodeMachine">
+            <div class="desc">Registers</div>
+            <table class="registers">
+                <tr>
+                    <th ng-repeat="reg in engine.R track by $index">R{{$index}}</th>
+                </tr>
+                <tr>
+                    <td ng-repeat="reg in engine.R track by $index">{{reg}}</td>
+                </tr>
+            </table>
         </div>
     </div>
 </body>
