@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" ng-app="patternApp">
+<head>
+    <meta charset="utf-8">
+    <title>Pattern Engine Test</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
+    <script src="http://code.jquery.com/color/jquery.color-2.1.2.js"></script>
+    <script src="js/pattern_engine.js"></script>
+    <script src="js/controllers.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body ng-controller="BytecodeCtrl">
+    <div class="assembler">
+        <form name="assemblerForm">
+            <div class="asmInput">
+                <textarea ng-model="progData.asmInput" name="assemblerInputText" cols=80 rows=20>
+                    
+                </textarea>
+            </div>            
+            <div class="buttons">
+                <input type="button" value="Assemble" ng-click="assemble()"/>
+            </div>
+        </form>
+        <div class="tokenizedOutput">
+                <table>
+                    <tr>
+                        <th>INS</th>
+                        <th>D</th>
+                        <th>M</th>
+                        <th>N</th>
+                    </tr>
+                    <tr ng-repeat="inst in progData.ins">
+                        <td>{{inst[0]}}</td>
+                        <td>{{inst[1]}}</td>
+                        <td>{{inst[2]}}</td>
+                        <td>{{inst[3]}}</td>
+                    </tr>
+                </table>
+            </div>
+        <div class="binaryViewer" title="binary machine code">
+        <table class="bits">
+            <tr>
+                <th ng-repeat="bit in bits">{{bit}}</th>
+            </tr>
+            <tr ng-repeat="b in progData.bytecodeOutput">
+                <td ng-repeat="bit in bits">
+                    {{b | getbit:bit}}
+                </td>
+            </tr>
+        </div>
+    </div>
+</body>
+</html>

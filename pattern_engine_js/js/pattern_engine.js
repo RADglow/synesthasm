@@ -261,6 +261,14 @@ function PatternEngine(opt) {
         that.condsymbol_map[index] = value.condCode;
     });
 
+    this.Tokenize = function (textAssembly) {
+    	var lines = textAssembly.split('\n');
+    	var ins = [];
+    	$.each(lines, function () {
+    		ins.push(this.split(' '));
+    	});
+    	return ins;
+    };
 
     this.Assemble = function (ins) {
         var INS_LENGTH_BYTES = 4;

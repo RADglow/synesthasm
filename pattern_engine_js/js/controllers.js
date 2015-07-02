@@ -125,3 +125,33 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
         }
     };
 });
+
+patternApp.controller('BytecodeCtrl', function ($scope) {
+
+    $scope.progData = {
+        asmInput: 'MOV 0 #1 0',
+        bytecodeOutput: 0,
+        ins: []
+    }
+
+    $scope.bits = [];
+
+    for (var i = 31; i >= 0; i--) {
+        $scope.bits.push(i);
+    };
+
+
+    $scope.engine = PatternEngine();
+
+    $scope.assemble = function () {
+        $scope.progData.ins = $scope.engine.Tokenize($scope.progData.asmInput);
+        $scope.progData.bytecodeOutput = $scope.engine.Assemble($scope.progData.ins);
+    }
+
+});
+
+patternApp.filter('getbit', function() {
+    return function (int32, position) {
+        return (int32 & Math.pow(2, position)) >> position;
+    }
+});
