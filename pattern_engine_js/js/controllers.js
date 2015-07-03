@@ -7,7 +7,12 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
             registers.R0++;
             registers.R1 = clockMs;
         }
-        return jQuery.Color({ hue: (360.0 / numPixels) * ((pixelNo + registers.R0) % numPixels), saturation: 1, lightness: 0.5, alpha: 1 });
+        return jQuery.Color({
+            hue: (360.0 / numPixels) * ((pixelNo + registers.R0) % numPixels),
+            saturation: 1,
+            lightness: 0.5,
+            alpha: 1
+        });
     };
 
     $scope.flash = function (clockMs, pixelNo, numPixels, registers) {
@@ -15,7 +20,12 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
             registers.R0++;
             registers.R1 = clockMs;
         }
-        return jQuery.Color({ hue: (360.0 / numPixels) * ((pixelNo + registers.R0) % numPixels), saturation: 1, lightness: 0.5 * (registers.R0 % 2), alpha: 1 });
+        return jQuery.Color({
+            hue: (360.0 / numPixels) * ((pixelNo + registers.R0) % numPixels),
+            saturation: 1,
+            lightness: 0.5 * (registers.R0 % 2),
+            alpha: 1
+        });
     };
     var stop;
 
@@ -25,15 +35,13 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
         'R1': 0
     }
 
-    $scope.strips = [
-      {
-          'name': 'Party Scarf Strip',
-          'numPixels': 48,
-          'pixelSize': 1,
-          'layout': 'linear',
-          'startSide': 'left'
-      }
-    ];
+    $scope.strips = [{
+        'name': 'Party Scarf Strip',
+        'numPixels': 48,
+        'pixelSize': 1,
+        'layout': 'linear',
+        'startSide': 'left'
+    }];
 
     $scope.strips.map(function (strip) {
         strip.pixels = []
@@ -129,11 +137,12 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
 patternApp.controller('BytecodeCtrl', function ($scope) {
 
     $scope.progData = {
-        asmInput: 'MOV 0 #1 0',
+        asmInput: 'MOV 0 0 #1',
         bytecodeOutput: 0,
         ins: [],
-        currentLine: 0
-    }
+        currentLine: 0,
+        decor: []
+    };
 
     $scope.bits = [];
 
@@ -147,26 +156,30 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
     $scope.assemble = function () {
         $scope.progData.ins = $scope.engine.Tokenize($scope.progData.asmInput);
         $scope.progData.bytecodeOutput = $scope.engine.Assemble($scope.progData.ins);
-    }
+        $scope.progData.decor = $scope.engine.DecorateBytecode($scope.progData.bytecodeOutput);
+    };
 
     $scope.reboot = function () {
         $scope.engine = PatternEngine();
         $scope.progData.currentLine = 0;
-    }
+    };
 
     $scope.step = function () {
         var line = $scope.progData.currentLine;
         var bytecode = $scope.progData.bytecodeOutput[line];
         $scope.engine.ExecuteBytecode([bytecode]);
         $scope.progData.currentLine++;
+    };
+
+    $scope.run = function () {
+        $scope.engine.ExecuteBytecode($scope.progData.bytecodeOutput);
+        $scope.progData.currentLine = $scope.progData.bytecodeOutput.length + 1;
     }
-
-
 
 });
 
-patternApp.filter('getbit', function() {
+patternApp.filter('getbit', function () {
     return function (int32, position) {
-        return (int32 & Math.pow(2, position)) >> position;
+        return (int32 & Math.pow(2, position)) >>> position;
     }
 });
