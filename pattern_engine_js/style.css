@@ -40,7 +40,8 @@ td {
 }
 
 .binaryViewer,
-.tokenizedOutput {
+.tokenizedOutput,
+.psrValues {
     float: left;
     margin: 0 0 20px 20px;
 }

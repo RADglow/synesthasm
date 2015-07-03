@@ -39,6 +39,34 @@
             <input type="button" value="Step" ng-click="step()" />
             <input type="button" value="Run" ng-click="run()" />
         </div>
+        <div class="bytecodeMachine">
+            <div class="desc">Registers</div>
+            <table class="registers">
+                <tr>
+                    <th ng-repeat="reg in engine.R track by $index">R{{$index}}</th>
+                </tr>
+                <tr>
+                    <td ng-repeat="reg in engine.R track by $index">{{reg}}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="psrValues">
+            <div class="desc">PSR Values</div>
+            <table class="registers">
+                <tr>
+                    <th>N</th>
+                    <th>C</th>
+                    <th>Z</th>
+                    <th>V</th>
+                </tr>
+                <tr>
+                    <td>{{engine.psr | getbit:31}}</td>
+                    <td>{{engine.psr | getbit:30}}</td>
+                    <td>{{engine.psr | getbit:29}}</td>
+                    <td>{{engine.psr | getbit:28}}</td>
+                </tr>
+            </table>
+        </div>
         <div class="tokenizedOutput">
             <div class="desc">Assembly input tokenized</div>
             <table>
@@ -48,7 +76,7 @@
                     <th>M</th>
                     <th>N</th>
                 </tr>
-                <tr ng-repeat="inst in progData.ins">
+                <tr ng-repeat="inst in progData.ins" ng-class="{'selected': progData.currentLine == $index }">
                     <td>{{inst[0]}}</td>
                     <td>{{inst[1]}}</td>
                     <td>{{inst[2]}}</td>
@@ -66,17 +94,6 @@
                     <td ng-repeat="bit in bits">
                         {{b | getbit:bit}}
                     </td>
-                </tr>
-            </table>
-        </div>
-        <div class="bytecodeMachine">
-            <div class="desc">Registers</div>
-            <table class="registers">
-                <tr>
-                    <th ng-repeat="reg in engine.R track by $index">R{{$index}}</th>
-                </tr>
-                <tr>
-                    <td ng-repeat="reg in engine.R track by $index">{{reg}}</td>
                 </tr>
             </table>
         </div>

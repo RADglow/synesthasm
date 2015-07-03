@@ -32,24 +32,7 @@ function PatternEngine(opt) {
         return (value >> end) & ~(~0 << (start - end + 1));
     };
 
-    this.executeDSR = function (fn, dest, n, m, locmask, updateCond, condSuffix) {
-        var rtn = fn(that.R[n], that.getOp2Value(m, locmask));
-        var nCond = (rtn & -0x80000000) === -0x80000000 ? 1 : 0;
-        var zCond = rtn === 0 ? 1 : 0;
-        var cCond = rtn > (Math.pow(2, 31) - 1) ? 1 : 0;
-        var vCond = rtn > 0x7fffffff ? 1 : 0;
 
-        if (cCond === 1) {
-            rtn = rtn - Math.pow(2, 31);
-        }
-
-        if (updateCond) {
-            // Update conditionals
-            this.psr = nCond << 31 | zCond << 30 | cCond << 29 | vCond << 28;
-        }
-        that.R[dest] = rtn;
-
-    };
 
 
     this.operations = {
@@ -121,10 +104,10 @@ function PatternEngine(opt) {
 
     // 31 30 29 28
     // N  Z  C  V
-    var N = 1 << 31;
-    var Z = 1 << 30;
-    var C = 1 << 29;
-    var V = 1 << 28;
+    var N = 1 << 31 >>> 0;
+    var Z = 1 << 30 >>> 0;
+    var C = 1 << 29 >>> 0;
+    var V = 1 << 28 >>> 0;
 
     var testCondSet = function (cond) {
         return that.mask(that.psr, cond);
@@ -290,6 +273,7 @@ function PatternEngine(opt) {
         var INS_LENGTH_BYTES = 4;
         var bytecode = [];
         $.each(ins, function (index, value) {
+            debugger;
             if (value.length != 4) {
                 throw new Error('Illegal bytecode: Each instruction should have 4 elements');
             }
@@ -299,9 +283,9 @@ function PatternEngine(opt) {
                 value[0] = value[0].substring(0, value[0].length - 1);
             }
             var rightTwo = value[0].substring(value[0].length - 2, value[0].length);
-            var conditional = 0;
+            var conditional = (that.conditionals.AL.condCode << 28) >>> 0;
             if (rightTwo in that.condsymbol_map) {
-                conditional = that.condsymbol_map[rightTwo] << 27;
+                conditional = (that.condsymbol_map[rightTwo] << 28) >>> 0;
                 value[0] = value[0].substring(0, value[0].length - 2);
             }
             if (!(value[0] in that.symbol_map)) {
@@ -313,20 +297,63 @@ function PatternEngine(opt) {
             if (value[1] > 15 | value[2] > 15) {
                 throw new Error('Illegal assembly, all register values must be less than 15');
             }
-            var Rd = value[1] << 12;
-            var Rn = value[2] << 16;
+            var Rd = (value[1] << 12) >>> 0;
+            var Rn = (value[2] << 16) >>> 0;
             var Rs = value[3];
             var opcode2 = Rs;
             if (Rs[0] == '#') {
                 Rs = Rs.substring(1, Rs.length);
                 opcode2 = parseInt(Rs, 10);
-                immediate = 1 << 25;
+                immediate = (1 << 24) >>> 0;
             }
 
-            bytecode.push(conditional | immediate | opcode | S | Rn | Rd | opcode2);
-            bytecode.push();
+            bytecode.push((conditional | immediate | opcode | S | Rn | Rd | opcode2) >>> 0);
         });
         return bytecode;
+    };
+
+    this.executeDSR = function (fn, dest, n, m, locmask, updateCond, condSuffix) {
+        var rtn = fn(that.R[n], that.getOp2Value(m, locmask));
+        var nCond = (rtn & -0x80000000) === -0x80000000 ? 1 : 0;
+        var zCond = rtn === 0 ? 1 : 0;
+        var cCond = rtn > (Math.pow(2, 31) - 1) ? 1 : 0;
+        var vCond = rtn > 0x7fffffff ? 1 : 0;
+
+        if (cCond === 1) {
+            rtn = rtn - Math.pow(2, 31);
+        }
+
+        if (updateCond) {
+            // Update conditionals
+            this.psr = (nCond << 31) >>> 0 | (zCond << 30) >>> 0 | (cCond << 29) >>> 0 | (vCond << 28) >>> 0;
+        }
+        that.R[dest] = rtn;
+
+    };
+
+    this.opTypes = {
+        'DSO': function (insBytecode) {
+            return (that.getVal(insBytecode, 27, 26) === 0);
+        }
+    };
+
+    this.getOpType = function (insBytecode) {
+        var type = undefined;
+        $.each(that.opTypes, function (index, value) {
+            if (value(insBytecode)) {
+                type = index;
+            };
+        });
+        return type;
+    };
+
+    this.DecorateBytecode = function (ins) {
+        var decorations = [];
+        $.each(ins, function (index, value) {
+            var type = that.getOpType(value);
+            decorations.push(type);
+        });
+        return decorations;
     };
 
     this.ExecuteBytecode = function (ins) {
@@ -357,7 +384,7 @@ function PatternEngine(opt) {
                 if (immediate) {
                     var rot = getVal(value, 11, 8);
                     var imm = getVal(value, 7, 0);
-                    var val = imm << rot;
+                    var val = imm << rot >>> 0;
                     that.executeDSR(that.opcode_map[opcode], Rd, Rn, val, 1, updateConditionals, cond);
 
                 } else {
