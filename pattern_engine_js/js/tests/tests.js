@@ -4,7 +4,7 @@ QUnit.test("Test unknown instruction", function (assert) {
             PatternEngine().ExecuteBytecode(
                 PatternEngine().Assemble([["EFAKE", 1, 2, 3]]));
         },
-        /Illegal bytecode/,
+        /Illegal assembly/,
         'An illegal instruction results in an Error.'
     );
 });
@@ -38,13 +38,13 @@ QUnit.test("Test assemble simple add returns CORRECT 4 bytes", function (assert)
 
     assert.equal(
         bytecode[0],
-        0b00000000000000010000000000000010,
-        'Simple ADD assembles to 00000000000000010000000000000010'
+        0b11100000000000010000000000000010,
+        'Simple ADD assembles to 11100000000000010000000000000010'
     );
 });
 
 QUnit.test("Test execute ADD bytecode with register arg", function (assert) {
-    var engine = PatternEngine();
+	var engine = PatternEngine();
     engine.R = [0, 10, 20, 0, 0, 0, 0, 0];
     var bytecode = engine.Assemble(
         [["ADD", 0, 1, 2]])

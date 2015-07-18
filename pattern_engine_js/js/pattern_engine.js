@@ -273,7 +273,6 @@ function PatternEngine(opt) {
         var INS_LENGTH_BYTES = 4;
         var bytecode = [];
         $.each(ins, function (index, value) {
-            debugger;
             if (value.length != 4) {
                 throw new Error('Illegal bytecode: Each instruction should have 4 elements');
             }
@@ -360,7 +359,7 @@ function PatternEngine(opt) {
         var that = this;
         var getVal = that.getVal;
         $.each(ins, function (index, value) {
-            if ((value >> 0) != value) {
+            if ((value >>> 0) != value) {
                 throw new Error('Illegal bytecode: Each instruction should be less than 32 bits');
             }
             if (getVal(value, 27, 26) === 0) {
