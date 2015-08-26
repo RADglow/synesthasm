@@ -337,11 +337,11 @@ function PatternEngine(opt) {
     };
 
     this.getOpType = function (insBytecode) {
-        var type = undefined;
+        var type;
         $.each(that.opTypes, function (index, value) {
             if (value(insBytecode)) {
                 type = index;
-            };
+            }
         });
         return type;
     };
