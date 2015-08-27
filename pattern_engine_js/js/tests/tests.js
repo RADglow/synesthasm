@@ -1,34 +1,34 @@
-QUnit.test("parse_line comments or empty lines", function(assert) {
+QUnit.test('parse_line comments or empty lines', function(assert) {
   assert.strictEqual(pattern_engine.parse_line('// comment'), null);
   assert.strictEqual(pattern_engine.parse_line('  // comment'), null);
   assert.strictEqual(pattern_engine.parse_line(''), null);
   assert.strictEqual(pattern_engine.parse_line('  \t'), null);
 });
 
-QUnit.test("parse_line invalid instruction", function(assert) {
+QUnit.test('parse_line invalid instruction', function(assert) {
   assert.throws(function() {
     pattern_engine.parse_line('WHAT');
   }, /Invalid instruction/);
 });
 
-QUnit.test("MOV parse", function(assert) {
+QUnit.test('MOV parse', function(assert) {
   var mov = pattern_engine.parse_line('MOV R0, 0');
-  assert.strictEqual(mov.toString(), "MOV R0, 0");
+  assert.strictEqual(mov.toString(), 'MOV R0, 0');
 
   mov = pattern_engine.parse_line('MOV R0, R1');
-  assert.strictEqual(mov.toString(), "MOV R0, R1");
+  assert.strictEqual(mov.toString(), 'MOV R0, R1');
 
   mov = pattern_engine.parse_line('MOV R15, 127');
-  assert.strictEqual(mov.toString(), "MOV R15, 127");
+  assert.strictEqual(mov.toString(), 'MOV R15, 127');
 
   mov = pattern_engine.parse_line('MOV R15, -128');
-  assert.strictEqual(mov.toString(), "MOV R15, -128");
+  assert.strictEqual(mov.toString(), 'MOV R15, -128');
 
   mov = pattern_engine.parse_line('MOV R15, 32767');
-  assert.strictEqual(mov.toString(), "MOV R15, 32767");
+  assert.strictEqual(mov.toString(), 'MOV R15, 32767');
 
   mov = pattern_engine.parse_line('MOV R15, -32768');
-  assert.strictEqual(mov.toString(), "MOV R15, -32768");
+  assert.strictEqual(mov.toString(), 'MOV R15, -32768');
 
   assert.throws(function() {
     pattern_engine.parse_line('MOV R15, -32769');
@@ -39,7 +39,7 @@ QUnit.test("MOV parse", function(assert) {
   }, /Literal out of range/);
 });
 
-QUnit.test("MOV execute", function(assert) {
+QUnit.test('MOV execute', function(assert) {
   var state1 = new pattern_engine.State();
   var state2 = pattern_engine.parse_line('MOV R0, 1').execute(state1);
   assert.notEqual(state2, state1);
@@ -50,7 +50,7 @@ QUnit.test("MOV execute", function(assert) {
   assert.equal(state3.r[1], 1);
 });
 
-QUnit.test("MOV toBytecode", function(assert) {
+QUnit.test('MOV toBytecode', function(assert) {
   assert.equal(
       pattern_engine.parse_line('MOV R0, 0').toBytecode(),
       //10987654321098765432109876543210
@@ -83,6 +83,69 @@ QUnit.test("MOV toBytecode", function(assert) {
       pattern_engine.parse_line('MOV R15, R14').toBytecode(),
       //10987654321098765432109876543210
       0b00001000001111100000000100001110);
+});
+
+QUnit.test('strip command parse', function(assert) {
+  var mov = pattern_engine.parse_line('WRGB 127, 127, 127');
+  assert.strictEqual(mov.toString(), 'WRGB 127, 127, 127');
+
+  mov = pattern_engine.parse_line('WHSL R0, R1, R2');
+  assert.strictEqual(mov.toString(), 'WHSL R0, R1, R2');
+});
+
+var FakePixel = function() {
+  this.r = null;
+  this.g = null;
+  this.b = null;
+  this.h = null;
+  this.s = null;
+  this.l = null;
+};
+
+FakePixel.prototype.setRgb = function(r, g, b) {
+  this.r = r; this.g = g; this.b = b;
+  this.h = null; this.s = null; this.l = null;
+}
+
+FakePixel.prototype.setHsl = function(h, s, l) {
+  this.h = h; this.s = s; this.l = l;
+  this.r = null; this.g = null; this.b = null;
+}
+
+QUnit.test('strip command execute', function(assert) {
+  var state = new pattern_engine.State();
+  state.r[0] = 255;
+  state.r[1] = 120;
+  state.r[2] = 10;
+  var pixel = new FakePixel();
+  var state2 = pattern_engine.parse_line('WRGB R0, R1, R2').execute(
+      state, pixel);
+  assert.equal(pixel.r, 255);
+  assert.equal(pixel.g, 120);
+  assert.equal(pixel.b, 10);
+  console.log(state);
+  console.log(state2);
+  // Make sure that state stays the same.
+  assert.deepEqual(state2, state);
+  pattern_engine.parse_line('WHSL 10, 20, R1').execute(
+      state, pixel);
+  assert.equal(pixel.r, null);
+  assert.equal(pixel.g, null);
+  assert.equal(pixel.b, null);
+  assert.equal(pixel.h, 10);
+  assert.equal(pixel.s, 20);
+  assert.equal(pixel.l, 120);
+});
+
+QUnit.test('strip command toBytecode', function(assert) {
+  assert.equal(
+      pattern_engine.parse_line('WRGB 0, 1, 2').toBytecode(),
+      //10987654321098765432109876543210
+      0b01110000000000000000001000000010);
+  assert.equal(
+      pattern_engine.parse_line('WHSL 0, 0, R15').toBytecode(),
+      //10987654321098765432109876543210
+      0b01111000000000000000000100001111);
 });
 
 /*

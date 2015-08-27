@@ -18,11 +18,15 @@ pattern_engine.State = function() {
   this.s = [0, 0, 0];
   this.z = false;
   this.p = false;
-  this.pc = 0;
 };
 
 pattern_engine.State.prototype.clone = function() {
-  return $.extend(true, {}, this);
+  var state = new pattern_engine.State();
+  state.r = this.r.slice();
+  state.s = this.s.slice();
+  state.z = this.z;
+  state.p = this.p;
+  return state;
 };
 
 // Instructions.
@@ -45,7 +49,7 @@ pattern_engine.parseRegister = function(token) {
 /**
  * Parses the operand or throws on error.
  * @param {string} token Uppercase token to parse.
- * @param {boolean} long_form_ok Whether 16b literals are ok.
+ * @param {?boolean} long_form_ok Whether 16b literals are ok.
  * @constructor
  */
 pattern_engine.Operand = function(token, long_form_ok) {
@@ -151,10 +155,10 @@ pattern_engine.Mov.prototype.execute = function(state) {
 };
 
 // Returns bytecode.
-pattern_engine.Mov.prototype.toBytecode = function(state) {
+pattern_engine.Mov.prototype.toBytecode = function() {
   return (
-      1 << 27 |  // opcode
-      this.dest_r << 18 |
+      (1 << 27) |  // opcode
+      (this.dest_r << 18) |
       (this.src.long_form ? 0 : 1) << 17 |
       this.src.toBytecode()
       ) >>> 0;
@@ -162,45 +166,78 @@ pattern_engine.Mov.prototype.toBytecode = function(state) {
 
 // ------------------------------------------------------------------
 
+// Strip (WRGB, WHSL) instructions.
+pattern_engine.WriteStrip = function(tokens) {
+  if (tokens[0] == 'WRGB') {
+    this.rgb = true;
+  } else if (tokens[0] == 'WHSL') {
+    this.rgb = false;
+  } else {
+    throw new Error('Invalid instruction: ' + tokens);
+  }
+  this.srcs = [
+    new pattern_engine.Operand(tokens[1]),
+    new pattern_engine.Operand(tokens[2]),
+    new pattern_engine.Operand(tokens[3]),
+  ];
+};
+
+// Pretty prints strip instruction.
+pattern_engine.WriteStrip.prototype.toString = function() {
+  var s = this.rgb ? 'WRGB ' : 'WHSL ';
+  return s + this.srcs[0].toString() +
+      ", " + this.srcs[1].toString() +
+      ", " + this.srcs[2].toString();
+};
+
+// Executes strip write instruction.
+pattern_engine.WriteStrip.prototype.execute = function(state, pixel) {
+  var vals = $.map(this.srcs, function(src) {
+    return src.getValue(state);
+  });
+  if (this.rgb) {
+    pixel.setRgb(vals[0], vals[1], vals[2]);
+  } else {
+    pixel.setHsl(vals[0], vals[1], vals[2]);
+  }
+  return state.clone();
+};
+
+// Returns bytecode.
+pattern_engine.WriteStrip.prototype.toBytecode = function() {
+  return (
+      ((this.rgb ? 14 : 15) << 27) |  // opcode
+      (this.srcs[0].toBytecode() << 18) |
+      (this.srcs[1].toBytecode() << 9) |
+      this.srcs[2].toBytecode()
+      ) >>> 0;
+};
+
+// ------------------------------------------------------------------
+
 // Returns an assembled bytecode or null, if line was empty.
 pattern_engine.parse_line = function(line) {
-  function parse_mov(tokens) {
-    return new pattern_engine.Mov(tokens);
-  }
-
-  function parse_cmp(tokens) {
-  }
-
-  function parse_branch(tokens) {
-  }
-
-  function parse_data(tokens) {
-  }
-
-  function parse_strip(tokens) {
-  }
-
-  var instruction_to_parser = {
+  var instruction_to_constructor = {
     mov: pattern_engine.Mov,
 
-    cmp: parse_cmp,
+    cmp: null,
 
-    jmp: parse_branch,
-    jeq: parse_branch,
-    jne: parse_branch,
-    jg: parse_branch,
-    jge: parse_branch,
-    jl: parse_branch,
-    jle: parse_branch,
+    jmp: null,
+    jeq: null,
+    jne: null,
+    jg: null,
+    jge: null,
+    jl: null,
+    jle: null,
 
-    wrgb: parse_strip,
-    whsl: parse_strip,
+    wrgb: pattern_engine.WriteStrip,
+    whsl: pattern_engine.WriteStrip,
 
-    add: parse_data,
-    sub: parse_data,
-    mul: parse_data,
-    div: parse_data,
-    mod: parse_data,
+    add: null,
+    sub: null,
+    mul: null,
+    div: null,
+    mod: null,
   };
 
   // Strip off comments.
@@ -214,7 +251,7 @@ pattern_engine.parse_line = function(line) {
   // Split on whitespace and/or commas.
   var tokens = line.split(/[ \t,]+/);
   var instruction = tokens[0].toLowerCase();
-  var constructor = instruction_to_parser[instruction];
+  var constructor = instruction_to_constructor[instruction];
   if (!constructor) {
     throw new Error("Invalid instruction: " + instruction);
   }
