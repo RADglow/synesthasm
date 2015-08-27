@@ -2,9 +2,9 @@
 
 if [ "$(uname)" == "Darwin" ]; then
   # Open browser after 2 seconds.
-  (sleep 2; open http://localhost:8000/tests/qunit.html) &
+  (sleep 2; open http://localhost:8000/js/tests/qunit.html) &
 else
-  echo "Open http://localhost:8000/tests/qunit.html in your browser."
+  echo "Open http://localhost:8000/js/tests/qunit.html in your browser."
 fi
-cd ..
+cd ../..
 python -m SimpleHTTPServer
