@@ -36,12 +36,12 @@ td {
 }
 
 .tokenizedOutput table {
-    width: 200px;
 }
 
+.colorBox,
 .binaryViewer,
 .tokenizedOutput,
-.psrValues {
+.flags {
     float: left;
     margin: 0 0 20px 20px;
 }

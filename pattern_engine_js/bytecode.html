@@ -43,60 +43,77 @@
             <div class="desc">Registers</div>
             <table class="registers">
                 <tr>
-                    <th ng-repeat="reg in engine.R track by $index">R{{$index}}</th>
+                    <th ng-repeat="reg in progData.state.r track by $index">R{{$index}}</th>
                 </tr>
                 <tr>
-                    <td ng-repeat="reg in engine.R track by $index">{{reg}}</td>
+                    <td ng-repeat="reg in progData.state.r track by $index">{{reg}}</td>
                 </tr>
             </table>
         </div>
-        <div class="psrValues">
-            <div class="desc">PSR Values</div>
+        <div class="flags">
+            <div class="desc">Flags</div>
             <table class="registers">
                 <tr>
-                    <th>N</th>
-                    <th>C</th>
+                    <th>P</th>
                     <th>Z</th>
-                    <th>V</th>
                 </tr>
                 <tr>
-                    <td>{{engine.psr | getbit:31}}</td>
-                    <td>{{engine.psr | getbit:30}}</td>
-                    <td>{{engine.psr | getbit:29}}</td>
-                    <td>{{engine.psr | getbit:28}}</td>
+                    <td>{{progData.state.p ? "1" : "0"}}</td>
+                    <td>{{progData.state.z ? "1" : "0"}}</td>
                 </tr>
             </table>
         </div>
         <div class="tokenizedOutput">
-            <div class="desc">Assembly input tokenized</div>
+            <div class="desc">Assembly input and bytecode</div>
             <table>
                 <tr>
-                    <th>INS</th>
-                    <th>D</th>
-                    <th>M</th>
-                    <th>N</th>
+                    <th>#</th>
+                    <th>Code</th>
+                    <th ng-repeat="bit in bits">{{bit}}</th>
                 </tr>
-                <tr ng-repeat="inst in progData.ins" ng-class="{'selected': progData.currentLine == $index }">
-                    <td>{{inst[0]}}</td>
-                    <td>{{inst[1]}}</td>
-                    <td>{{inst[2]}}</td>
-                    <td>{{inst[3]}}</td>
-                </tr>
+                <tr ng-repeat="inst in progData.assembled" ng-class="{'selected': progData.pc == inst.address }">
+                  <td>{{inst.address}}</td>
+                  <td>{{inst.asm}}</td>
+                  <td ng-repeat="bit in bits">
+                      {{inst.byteCode | getbit:bit}}
+                  </td>
+              </tr>
             </table>
         </div>
+        <div class="colorBox">
+            <div class="desc">Pixel color output</div>
+            <table>
+                <tr>
+                    <th>R</th>
+                    <th>G</th>
+                    <th>B</th>
+                    <th>H</th>
+                    <th>S</th>
+                    <th>L</th>
+                    <th>color</th>
+                </tr>
+                <tr>
+                  <td>{{pixel.r}}</td>
+                  <td>{{pixel.g}}</td>
+                  <td>{{pixel.b}}</td>
+                  <td>{{pixel.h}}</td>
+                  <td>{{pixel.s}}</td>
+                  <td>{{pixel.l}}</td>
+                  <td ng-style="pixelStyle"></td>
+              </tr>
+            </table>
+        </div>
+        <!--
         <div class="binaryViewer" title="binary machine code">
             <div class="desc">Bytecode binary output</div>
             <table class="bits">
                 <tr>
-                    <th ng-repeat="bit in bits">{{bit}}</th>
                 </tr>
                 <tr ng-repeat="b in progData.bytecodeOutput track by $index" ng-class="{'selected': progData.currentLine == $index }">
-                    <td ng-repeat="bit in bits">
-                        {{b | getbit:bit}}
-                    </td>
                 </tr>
             </table>
         </div>
+        -->
     </div>
 </body>
 

@@ -1,40 +1,10 @@
 var patternApp = angular.module('patternApp', []);
 
+// TODO: add back support for more than one pixel.
+// TODO: handle strip properties and ticks.
+
 patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
-
-    $scope.rainbows = function (clockMs, pixelNo, numPixels, registers) {
-        if (pixelNo == 0 && (clockMs - registers.R1 > 100)) {
-            registers.R0++;
-            registers.R1 = clockMs;
-        }
-        return jQuery.Color({
-            hue: (360.0 / numPixels) * ((pixelNo + registers.R0) % numPixels),
-            saturation: 1,
-            lightness: 0.5,
-            alpha: 1
-        });
-    };
-
-    $scope.flash = function (clockMs, pixelNo, numPixels, registers) {
-        if (pixelNo == 0 && (clockMs - registers.R1 > 400)) {
-            registers.R0++;
-            registers.R1 = clockMs;
-        }
-        return jQuery.Color({
-            hue: (360.0 / numPixels) * ((pixelNo + registers.R0) % numPixels),
-            saturation: 1,
-            lightness: 0.5 * (registers.R0 % 2),
-            alpha: 1
-        });
-    };
-    var stop;
-
-    $scope.pattern = $scope.rainbows
-    $scope.registers = {
-        'R0': 0,
-        'R1': 0
-    }
-
+  /*
     $scope.strips = [{
         'name': 'Party Scarf Strip',
         'numPixels': 48,
@@ -84,43 +54,6 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
     $scope.currentStrip = null;
     $scope.currentPixelNo = 0;
 
-    $scope.operations = {
-        'ADD': function (dest, n, m) {
-            $scope.R[dest] = $scope.R[n] + $scope.R[m];
-        },
-        'SUB': function (dest, n, m) {
-            $scope.R[dest] = $scope.R[n] - $scope.R[m];
-        },
-        'MUL': function (dest, n, m) {
-            $scope.R[dest] = $scope.R[n] * $scope.R[m];
-        },
-        'DIV': function (dest, n, m) {
-            $scope.R[dest] = $scope.R[n] / $scope.R[m];
-        },
-        'SUB': function (dest, n, m) {
-            $scope.R[dest] = $scope.R[n] - $scope.R[m];
-        },
-        'MOD': function (dest, n, m) {
-            $scope.R[dest] = $scope.R[n] % $scope.R[m];
-        },
-        'MOVC': function (dest, c, unused) {
-            if (c == 'MAXINT32') {
-                c = 2 ^ 32;
-            }
-            $scope.R[dest] = c;
-        },
-        'LOAD': function (dest, ioAddr, unused) {
-            $scope.R[dest] = $scope.ioAddrs[ioAddr]();
-        },
-        'WHSL': function (hue, saturation, lightness) {
-            $scope.currentStrip[currentPixelNo] = jQuery.Color({
-                hue: hue,
-                saturation: saturation,
-                lightness: lightness
-            })
-        }
-    };
-
     $scope.ioAddrs = {
         '/ticks': function () {
             return new Date;
@@ -132,50 +65,88 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
             return $scope.currentPixelNo;
         }
     };
+    */
 });
 
 patternApp.controller('BytecodeCtrl', function ($scope) {
 
-    $scope.progData = {
-        asmInput: 'MOV 0 0 #1',
-        bytecodeOutput: 0,
-        ins: [],
-        currentLine: 0,
-        decor: []
-    };
+  $scope.progData = {
+    asmInput: 'MOV R0, 255\n//comment\nWRGB R0, 127, 127',
+    assembled: [],
+    pc: 0,
+    state: new pattern_engine.State(),
+  };
 
-    $scope.bits = [];
+  // TODO: rework this.
+  $scope.bits = [];
+  for (var i = 31; i >= 0; i--) {
+    $scope.bits.push(i);
+  };
 
-    for (var i = 31; i >= 0; i--) {
-        $scope.bits.push(i);
-    };
+  $scope.pixelStyle = {
+    'background-color': 'black',
+  };
 
+  $scope.pixel = {
+    r: 0, g: 0, b: 0,
+    h: 0, s: 0, l: 0,
+  };
 
-    $scope.engine = PatternEngine();
+  $scope.assemble = function() {
+    $scope.progData.assembled = pattern_engine.assemble(
+        $scope.progData.asmInput);
+  };
 
-    $scope.assemble = function () {
-        $scope.progData.ins = $scope.engine.Tokenize($scope.progData.asmInput);
-        $scope.progData.bytecodeOutput = $scope.engine.Assemble($scope.progData.ins);
-        $scope.progData.decor = $scope.engine.DecorateBytecode($scope.progData.bytecodeOutput);
-    };
+  $scope.reboot = function () {
+    $scope.progData.state = new pattern_engine.State();
+    $scope.progData.pc = 0;
+  };
 
-    $scope.reboot = function () {
-        $scope.engine = PatternEngine();
-        $scope.progData.currentLine = 0;
-    };
+  var pixelHandler = {
+    setRgb: function(r, g, b) {
+      $scope.pixel.r = r; $scope.pixel.g = g; $scope.pixel.b = b;
+      $scope.pixel.h = 0; $scope.pixel.s = 0; $scope.pixel.l = 0;
+      $scope.pixelStyle['background-color'] = jQuery.Color({
+        red: r, green: g, blue: b, alpha: 1,
+      });
+    },
+    setHsl: function(h, s, l) {
+      $scope.pixel.r = 0; $scope.pixel.g = 0; $scope.pixel.b = 0;
+      $scope.pixel.h = h; $scope.pixel.s = s; $scope.pixel.l = l;
+      $scope.pixelStyle['background-color'] = jQuery.Color({
+        hue: 360.0 * h / 255.0,
+        saturation: s / 255.0,
+        lightness: l / 255.0,
+        alpha: 1
+      });
+    },
+  };
 
-    $scope.step = function () {
-        var line = $scope.progData.currentLine;
-        var bytecode = $scope.progData.bytecodeOutput[line];
-        $scope.engine.ExecuteBytecode([bytecode]);
-        $scope.progData.currentLine++;
-    };
+  $scope.step = function () {
+    var pc = $scope.progData.pc;
+    $.each($scope.progData.assembled, function(_, item) {
+      if (item.address == pc) {
+        $scope.progData.state = item.instruction.execute(
+            $scope.progData.state, pixelHandler);
+      }
+    });
+    $scope.progData.pc++;
+  };
 
-    $scope.run = function () {
-        $scope.engine.ExecuteBytecode($scope.progData.bytecodeOutput);
-        $scope.progData.currentLine = $scope.progData.bytecodeOutput.length + 1;
+  $scope.run = function() {
+    var maxPc = 0;
+    $.each($scope.progData.assembled, function(_, item) {
+      if (item.address && item.address > maxPc) {
+        maxPc = item.address;
+      }
+    });
+    while ($scope.progData.pc <= maxPc) {
+      // TODO: add timeout.
+      $scope.step();
     }
+  };
 
+  $scope.assemble();
 });
 
 patternApp.filter('getbit', function () {
