@@ -13,13 +13,28 @@ synesthasm is a simple bytecode "virtual machine".
 
 # Instructions
 
+## Operands
+
+Most source operands can take one of the following forms:
+* nnn or -nnn: signed 8-bit immediate value: -128 .. 127. Since the registers
+  are 32 bits wide, the operations will automatically sign-extend the values.
+* R0 .. R15: register
+* S0 .. S2: special value register. Each of these registers also has an easy to
+  memorize alias:
+   * S0 (aka TICKS): number of ticks (in milliseconds since start)
+   * S1 (aka PIX): current pixel number
+   * S2 (aka COUNT): total number of pixels in the strip
+
 ## Move stuff
 
 ~~~
 MOV dest, src
+
+dest: register
+src: operand. Immediate values can be 16 bits wide, still sign extended.
 ~~~
 
-## Do Maths
+## Data instructions
 
 ~~~
 ADD dest, src1, src2
@@ -28,6 +43,9 @@ MUL dest, src1, src2
 DIV dest, src1, src2
 MOD dest, src1, src2
 
+dest: register
+src1, src2: operands, as above.
+
 TODO: add shifts and bitwise operators.
 ~~~
 
@@ -35,6 +53,8 @@ TODO: add shifts and bitwise operators.
 
 ~~~
 CMP src1, src2 : perform (src1 - src2), update Z and P status flags.
+
+src1, src2: operands, as above.
 ~~~
 
 ## Branch
@@ -47,6 +67,8 @@ JG  address  # jumps if Z=0, P=1
 JGE address  # jumps if P=1
 JL  address  # jumps if Z=0 P=0
 JLE address  # jumps if P=0
+
+address: unsigned 16b absolute address
 ~~~
 
 ## Strip
@@ -58,6 +80,8 @@ sat, lightness) is in range 0..255. If a higher value is provided, lowest
 ~~~
 WRGB r, g, b
 WHSL hue, sat, lightness
+
+Each argument is an operand.
 ~~~
 
 ## Misc
@@ -87,7 +111,6 @@ one of three forms, depending on first bits:
 MOV (opcode 1):
 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
 0  0  0  0  1  0  0  0  0  0  <- dest --> 0  0  <-- 16b immediate value, sign extended ------->
-0  0  0  0  1  0  0  0  0  0  <- dest --> 0  1  <-- 16b immediate value, unsigned ------------>
 0  0  0  0  1  0  0  0  0  0  <- dest --> 1  0  0  0  0  0  0  0  0  <-- operand ------------->
 
 dest: destination register.
@@ -122,7 +145,7 @@ WHSL (opcode 15):
 
 each of hue, sat and lightness is an operand.
 
-Maths (opcodes 16..31):
+Data instructions (opcodes 16..31):
 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
 <-- opcode --> 0  0  0  0  0  <- dest --> <- src1 -----------------> <- src2 ----------------->
 

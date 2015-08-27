@@ -1,3 +1,228 @@
+"use strict";
+// jshint globalstrict:true
+// jshint node:true
+// jshint jquery:true
+
+var pattern_engine = {};  // namespace
+
+pattern_engine.S_REGISTERS = {
+  TICKS: 0,
+  PIX: 1,
+  COUNT: 2,
+};
+
+// Interpreter state.
+pattern_engine.State = function() {
+  this.r = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  // S registers: TICKS, PIX, COUNT.
+  this.s = [0, 0, 0];
+  this.z = false;
+  this.p = false;
+  this.pc = 0;
+};
+
+pattern_engine.State.prototype.clone = function() {
+  return $.extend(true, {}, this);
+};
+
+// Instructions.
+
+// ------------------------------------------------------------------
+
+// Parses the operand as a register, returns the register number
+// as an integer, or raises an error.
+pattern_engine.parseRegister = function(token) {
+  if (!/^[rR](\d+)$/.test(token)) {
+    throw new Error('Invalid register: ' + token);
+  }
+  var r = parseInt(token.substring(1), 10);
+  if (r < 0 || r > 15) {
+    throw new Error('Invalid register: ' + token);
+  }
+  return r;
+};
+
+/**
+ * Parses the operand or throws on error.
+ * @param {string} token Uppercase token to parse.
+ * @param {boolean} long_form_ok Whether 16b literals are ok.
+ * @constructor
+ */
+pattern_engine.Operand = function(token, long_form_ok) {
+  this.r = null;
+  this.s = null;
+  this.value = null;
+  this.long_form = false;
+
+  var rs_match = token.match(/^([RS])(\d+)$/);
+  var v;
+  if (rs_match) {
+    v = parseInt(rs_match[2], 10);
+    if (rs_match[1] == 'R') {
+      if (v < 0 || v > 15) {
+        throw new Error("Invalid register: " + token);
+      }
+      this.r = v;
+    } else {
+      if (v < 0 || v > 2) {
+        throw new Error("Invalid special register: " + token);
+      }
+      this.s = v;
+    }
+    return;
+  }
+  $.each(pattern_engine.S_REGISTERS, function(k, v) {
+    if (token == k) {
+      this.s = v;
+      return;
+    }
+  });
+  if (!/^-?\d+$/.test(token)) {
+    throw new Error("Invalid literal value in operand: " + token);
+  }
+  v = parseInt(token, 10);
+  if (long_form_ok) {
+    if (v < -32768 || v > 32767) {
+      throw new Error("Literal out of range: " + token);
+    }
+    if (v < -128 || v > 127) {
+      this.long_form = true;
+    }
+  } else {
+    if (v < -128 || v > 127) {
+      throw new Error("Literal out of range: " + token);
+    }
+  }
+  this.value = v;
+};
+
+pattern_engine.Operand.prototype.toString = function() {
+  if (this.r !== null) {
+    return 'R' + this.r;
+  }
+  if (this.s !== null) {
+    return 'S' + this.s;
+  }
+  return '' + this.value;
+};
+
+pattern_engine.Operand.prototype.getValue = function(state) {
+  if (this.r !== null) {
+    return state.r[this.r];
+  }
+  if (this.s !== null) {
+    return state.s[this.s];
+  }
+  return this.value;
+};
+
+pattern_engine.Operand.prototype.toBytecode = function() {
+  if (this.r !== null) {
+    return (1 << 8) | this.r;
+  } else if (this.s !== null) {
+    return (1 << 8) | (1 << 7) | this.s;
+  } else {
+    if (this.long_form) {
+      return this.value & 0xffff;
+    } else {
+      return this.value & 0xff;
+    }
+  }
+};
+
+// ------------------------------------------------------------------
+
+// MOV instruction.
+pattern_engine.Mov = function(tokens) {
+  this.dest_r = pattern_engine.parseRegister(tokens[1]);
+  this.src = new pattern_engine.Operand(tokens[2], true);
+};
+
+// Pretty prints MOV instruction..
+pattern_engine.Mov.prototype.toString = function() {
+  return "MOV R" + this.dest_r + ", " + this.src.toString();
+};
+
+// Executes MOV instruction.
+pattern_engine.Mov.prototype.execute = function(state) {
+  var newState = state.clone();
+  newState.r[this.dest_r] = this.src.getValue(state);
+  return newState;
+};
+
+// Returns bytecode.
+pattern_engine.Mov.prototype.toBytecode = function(state) {
+  return (
+      1 << 27 |  // opcode
+      this.dest_r << 18 |
+      (this.src.long_form ? 0 : 1) << 17 |
+      this.src.toBytecode()
+      ) >>> 0;
+};
+
+// ------------------------------------------------------------------
+
+// Returns an assembled bytecode or null, if line was empty.
+pattern_engine.parse_line = function(line) {
+  function parse_mov(tokens) {
+    return new pattern_engine.Mov(tokens);
+  }
+
+  function parse_cmp(tokens) {
+  }
+
+  function parse_branch(tokens) {
+  }
+
+  function parse_data(tokens) {
+  }
+
+  function parse_strip(tokens) {
+  }
+
+  var instruction_to_parser = {
+    mov: pattern_engine.Mov,
+
+    cmp: parse_cmp,
+
+    jmp: parse_branch,
+    jeq: parse_branch,
+    jne: parse_branch,
+    jg: parse_branch,
+    jge: parse_branch,
+    jl: parse_branch,
+    jle: parse_branch,
+
+    wrgb: parse_strip,
+    whsl: parse_strip,
+
+    add: parse_data,
+    sub: parse_data,
+    mul: parse_data,
+    div: parse_data,
+    mod: parse_data,
+  };
+
+  // Strip off comments.
+  line = line.replace(/\/\/.*/, '');
+  // Strip off leading/trailing whitespace.
+  line = line.replace(/^\s+/, '').replace(/\s+$/, '');
+  if (line === '') {
+    // Nothing to assemble.
+    return null;
+  }
+  // Split on whitespace and/or commas.
+  var tokens = line.split(/[ \t,]+/);
+  var instruction = tokens[0].toLowerCase();
+  var constructor = instruction_to_parser[instruction];
+  if (!constructor) {
+    throw new Error("Invalid instruction: " + instruction);
+  }
+  return new constructor(tokens);  // jshint ignore:line
+};
+
+// ------------------------------------------------------------------
+
 function PatternEngine(opt) {
     //hide "new"
     if (!(this instanceof PatternEngine))
@@ -374,7 +599,7 @@ function PatternEngine(opt) {
                 var cond = getVal(value, 31, 28);
                 var opcode = getVal(value, 24, 21);
                 if (!(opcode in that.opcode_map)) {
-                    return Error('Illegal bytecode: Unknown DSR opcode ' + opcode);
+                    return new Error('Illegal bytecode: Unknown DSR opcode ' + opcode);
                 }
                 var Rn = getVal(value, 19, 16);
                 var Rd = getVal(value, 15, 12);

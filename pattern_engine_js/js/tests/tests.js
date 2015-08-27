@@ -1,22 +1,88 @@
-//var pe = require('../pattern_engine.js');
-//var PatternEngine = pe.PatternEngine;
-
-QUnit.test("works", function(assert) {
-  assert.equal(1, 1, 'yay');
+QUnit.test("parse_line comments or empty lines", function(assert) {
+  assert.strictEqual(pattern_engine.parse_line('// comment'), null);
+  assert.strictEqual(pattern_engine.parse_line('  // comment'), null);
+  assert.strictEqual(pattern_engine.parse_line(''), null);
+  assert.strictEqual(pattern_engine.parse_line('  \t'), null);
 });
 
-QUnit.test("foo", function(assert) {
-  assert.equal(1, 1, 'yay1');
-  var engine = PatternEngine();
+QUnit.test("parse_line invalid instruction", function(assert) {
+  assert.throws(function() {
+    pattern_engine.parse_line('WHAT');
+  }, /Invalid instruction/);
+});
 
-  // var bytecode = engine.Assemble([["ADD", 0, 1, 2]]);
+QUnit.test("MOV parse", function(assert) {
+  var mov = pattern_engine.parse_line('MOV R0, 0');
+  assert.strictEqual(mov.toString(), "MOV R0, 0");
 
-  /*
+  mov = pattern_engine.parse_line('MOV R0, R1');
+  assert.strictEqual(mov.toString(), "MOV R0, R1");
+
+  mov = pattern_engine.parse_line('MOV R15, 127');
+  assert.strictEqual(mov.toString(), "MOV R15, 127");
+
+  mov = pattern_engine.parse_line('MOV R15, -128');
+  assert.strictEqual(mov.toString(), "MOV R15, -128");
+
+  mov = pattern_engine.parse_line('MOV R15, 32767');
+  assert.strictEqual(mov.toString(), "MOV R15, 32767");
+
+  mov = pattern_engine.parse_line('MOV R15, -32768');
+  assert.strictEqual(mov.toString(), "MOV R15, -32768");
+
+  assert.throws(function() {
+    pattern_engine.parse_line('MOV R15, -32769');
+  }, /Literal out of range/);
+
+  assert.throws(function() {
+    pattern_engine.parse_line('MOV R15, 32768');
+  }, /Literal out of range/);
+});
+
+QUnit.test("MOV execute", function(assert) {
+  var state1 = new pattern_engine.State();
+  var state2 = pattern_engine.parse_line('MOV R0, 1').execute(state1);
+  assert.notEqual(state2, state1);
+  assert.equal(state2.r[0], 1);
+  assert.equal(state2.r[1], 0);
+  state3 = pattern_engine.parse_line('MOV R1, R0').execute(state2);
+  assert.equal(state3.r[0], 1);
+  assert.equal(state3.r[1], 1);
+});
+
+QUnit.test("MOV toBytecode", function(assert) {
   assert.equal(
-      bytecode[0],
-      111,//0b11100000000000010000000000000010,
-      'Simple ADD assembles to 11100000000000010000000000000010'
-      );*/
+      pattern_engine.parse_line('MOV R0, 0').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000000000100000000000000000);
+  assert.equal(
+      pattern_engine.parse_line('MOV R0, 127').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000000000100000000001111111);
+  assert.equal(
+      pattern_engine.parse_line('MOV R0, -1').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000000000100000000011111111);
+  assert.equal(
+      pattern_engine.parse_line('MOV R0, 128').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000000000000000000010000000);
+  assert.equal(
+      pattern_engine.parse_line('MOV R15, 32767').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000001111000111111111111111);
+  assert.equal(
+      pattern_engine.parse_line('MOV R15, -32768').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000001111001000000000000000);
+  assert.equal(
+      pattern_engine.parse_line('MOV R15, S2').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000001111100000000110000010);
+  assert.equal(
+      pattern_engine.parse_line('MOV R15, R14').toBytecode(),
+      //10987654321098765432109876543210
+      0b00001000001111100000000100001110);
 });
 
 /*
@@ -60,7 +126,7 @@ QUnit.test("Test assemble simple add returns CORRECT 4 bytes", function (assert)
 
     assert.equal(
         bytecode[0],
-        111,//0b11100000000000010000000000000010,
+        0b11100000000000010000000000000010,
         'Simple ADD assembles to 11100000000000010000000000000010'
     );
 });
