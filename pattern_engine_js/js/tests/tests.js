@@ -112,11 +112,11 @@ QUnit.test('MOV toBytecode', function(assert) {
 });
 
 QUnit.test('strip command parse', function(assert) {
-  var mov = pattern_engine.parseLine('WRGB 127, 127, 127');
-  assert.strictEqual(mov.toString(), 'WRGB 127, 127, 127');
+  var instr = pattern_engine.parseLine('WRGB 127, 127, 127');
+  assert.strictEqual(instr.toString(), 'WRGB 127, 127, 127');
 
-  mov = pattern_engine.parseLine('WHSL R0, R1, R2');
-  assert.strictEqual(mov.toString(), 'WHSL R0, R1, R2');
+  instr = pattern_engine.parseLine('WHSL R0, R1, R2');
+  assert.strictEqual(instr.toString(), 'WHSL R0, R1, R2');
 
   assert.throws(function() {
     pattern_engine.parseLine('WHSL R0, R0, -1');
@@ -187,11 +187,11 @@ QUnit.test('strip command toBytecode', function(assert) {
 });
 
 QUnit.test('CMP parse', function(assert) {
-  var mov = pattern_engine.parseLine('CMP R0, 0');
-  assert.strictEqual(mov.toString(), 'CMP R0, 0');
+  var instr = pattern_engine.parseLine('CMP R0, 0');
+  assert.strictEqual(instr.toString(), 'CMP R0, 0');
 
-  mov = pattern_engine.parseLine('CMP 5, R1');
-  assert.strictEqual(mov.toString(), 'CMP 5, R1');
+  instr = pattern_engine.parseLine('CMP 5, R1');
+  assert.strictEqual(instr.toString(), 'CMP 5, R1');
 
   assert.throws(function() {
     pattern_engine.parseLine('CMP R0, -1');
@@ -228,17 +228,22 @@ QUnit.test('CMP toBytecode', function(assert) {
 });
 
 QUnit.test('JMP parse', function(assert) {
-  var mov = pattern_engine.parseLine('JMP 0');
-  assert.strictEqual(mov.toString(), 'JMP 0');
+  var instr = pattern_engine.parseLine('JMP 0');
+  assert.strictEqual(instr.toString(), 'JMP 0');
 
-  var mov = pattern_engine.parseLine('JMP 0xffff');
-  assert.strictEqual(mov.toString(), 'JMP 65535');
+  instr = pattern_engine.parseLine('JMP 0xffff');
+  assert.strictEqual(instr.toString(), 'JMP 65535');
 
-  mov = pattern_engine.parseLine('JNE 123');
-  assert.strictEqual(mov.toString(), 'JNE 123');
+  instr = pattern_engine.parseLine('JNE 123');
+  assert.strictEqual(instr.toString(), 'JNE 123');
 
-  mov = pattern_engine.parseLine('JG 123');
-  assert.strictEqual(mov.toString(), 'JG 123');
+  instr = pattern_engine.parseLine('JG 123');
+  assert.strictEqual(instr.toString(), 'JG 123');
+
+  instr = pattern_engine.parseLine('JMP label_1');
+  assert.strictEqual(instr.toString(), 'JMP label_1  // ???');
+  instr.address = 123;
+  assert.strictEqual(instr.toString(), 'JMP label_1  // 123');
 
   assert.throws(function() {
     pattern_engine.parseLine('JMP 65536');
@@ -288,11 +293,11 @@ QUnit.test('JMP toBytecode', function(assert) {
 });
 
 QUnit.test('data parse', function(assert) {
-  var mov = pattern_engine.parseLine('ADD R0, 1, R2');
-  assert.strictEqual(mov.toString(), 'ADD R0, 1, R2');
+  var instr = pattern_engine.parseLine('ADD R0, 1, R2');
+  assert.strictEqual(instr.toString(), 'ADD R0, 1, R2');
 
-  var mov = pattern_engine.parseLine('SUB R0, R0, R0');
-  assert.strictEqual(mov.toString(), 'SUB R0, R0, R0');
+  instr = pattern_engine.parseLine('SUB R0, R0, R0');
+  assert.strictEqual(instr.toString(), 'SUB R0, R0, R0');
 
   assert.throws(function() {
     pattern_engine.parseLine('ADD R0, 1, 256');
@@ -341,4 +346,21 @@ QUnit.test('data toBytecode', function(assert) {
       pattern_engine.parseLine('MOD R3, 1, 2').toBytecode(),
       //10987654321098765432109876543210
       0b10100000000011000000001000000010);
+});
+
+QUnit.test('assemble', function(assert) {
+  var code = 'MOV R0, 0x0 // meh\nJMP no_update\nMOV R2, 2\nno_update:\nMOV R3, 3';
+  var assembled = pattern_engine.assemble(code);
+  assert.equal(assembled.length, 5);
+  assert.equal(assembled[0].asm, 'MOV R0, 0x0 // meh');
+  assert.equal(assembled[0].instruction.toString(), 'MOV R0, 0');
+  assert.equal(assembled[0].address, 0);
+
+  assert.equal(assembled[1].instruction.address, 3);
+  assert.equal(assembled[1].instruction.toString(), 'JMP no_update  // 3');
+
+  assert.strictEqual(assembled[3].instruction, null);
+  assert.strictEqual(assembled[3].address, null);
+
+  assert.equal(assembled[4].address, 3);
 });

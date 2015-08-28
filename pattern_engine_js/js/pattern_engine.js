@@ -236,13 +236,27 @@ pattern_engine.Jmp = function(tokens) {
   if (!(this.instruction in pattern_engine.JMP_INSTRUCTIONS)) {
     throw new Error('Invalid branch instruction: ' + tokens[0]);
   }
-  // TODO: implement labels.
-  this.address = pattern_engine.parseLiteral(tokens[1], 0, 0xffff);
+  if (/^\D/.test(tokens[1])) {
+    this.label = tokens[1];
+    this.address = null;
+  } else {
+    this.label = null;
+    this.address = pattern_engine.parseLiteral(tokens[1], 0, 0xffff);
+  }
 };
 
 // Pretty prints JMP instruction..
 pattern_engine.Jmp.prototype.toString = function() {
-  return this.instruction + " " + this.address;
+  var s = this.instruction + ' ';
+  if (this.label !== null) {
+    s += this.label + '  // ';
+  }
+  if (this.address !== null) {
+    s += this.address;
+  } else {
+    s += '???';
+  }
+  return s;
 };
 
 // Executes JMP instruction.
@@ -431,6 +445,17 @@ pattern_engine.parseLine = function(line) {
   return new constructor(tokens);  // jshint ignore:line
 };
 
+// Tries parsing a label. Returns the label as string, if it
+// succeeds, null otherwise.
+pattern_engine.parseLabel = function(line) {
+  // Strip off comments.
+  line = line.replace(/\/\/.*/, '');
+  var match = line.match(/^\s*([a-zA-Z0-9_]+)\s*:\s*$/);
+  if (!match) {
+    return null;
+  }
+  return match[1];
+};
 // ------------------------------------------------------------------
 
 // Splits given string (program code) into lines, assembles each line
@@ -443,26 +468,46 @@ pattern_engine.parseLine = function(line) {
 //       instruction
 pattern_engine.assemble = function(text) {
   var lines = text.split('\n');
-  var assembled = $.map(lines, function(line) {
-    var out = {};
-    out.asm = line;
-    var parsed = pattern_engine.parseLine(line);
-    if (parsed) {
-      out.instruction = parsed;
-      out.byteCode = parsed.toBytecode();
-    }
-    return out;
-  });
-  // Renumber.
+  var labelsToAddresses = {};
   var i = 0;
-  var renumbered = $.map(assembled, function(struct) {
-    if (struct.byteCode) {
-      struct.address = i;
-      i++;
+  var assembled = $.map(lines, function(line) {
+    var label = pattern_engine.parseLabel(line);
+    var instruction = null;
+    var byteCode = null;
+    var address = null;
+    if (label !== null) {
+      if (label in labelsToAddresses) {
+        throw new Error('Duplicate label: ' + label);
+      }
+      labelsToAddresses[label] = i;
     } else {
-      struct.address = null;
+      // Only try to parse it as instruction if it wasn't a label.
+      instruction = pattern_engine.parseLine(line);
+      if (instruction !== null) {
+        byteCode = instruction.toBytecode();
+        address = i;
+        i++;
+      }
     }
-    return struct;
+    return {
+      asm: line,
+      label: label,
+      instruction: instruction,
+      byteCode: byteCode,
+      address: address,
+    };
+  });
+  // Assign addresses to branch instructions that have labels.
+  $.each(assembled, function(_, struct) {
+    if (struct.instruction &&
+        struct.instruction instanceof pattern_engine.Jmp) {
+      var label = struct.instruction.label;
+      if (!(label in labelsToAddresses)) {
+        throw new Error('Label not found: ' + label);
+      }
+      var address = labelsToAddresses[label];
+      struct.instruction.address = address;
+    }
   });
   return assembled;
 };

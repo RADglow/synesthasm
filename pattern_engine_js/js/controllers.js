@@ -71,7 +71,26 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
 patternApp.controller('BytecodeCtrl', function ($scope) {
 
   $scope.progData = {
-    asmInput: 'MOV R0, 130\n//comment\nWHSL R0, 255, 127',
+    asmInput: (
+        '  // Are we on pixel zero?\n' +
+        '  CMP PIX, 0\n' +
+        '  JNE no_update\n' +
+        '  // Yup, pixel zero.\n' +
+        '  // Is it time to update? We use R15 for previous update time.\n' +
+        '  SUB R0, TICKS, R15\n' +
+        '  CMP R0, 100\n' +
+        '  JLE no_update\n' +
+        '  // Yes, time to update.\n' +
+        '  MOV R15, TICKS\n' +
+        '  ADD R14, R14, 1  // Increment current position.\n' +
+        'no_update:\n' +
+        '// Calculate hue as ((PIX + R14) % COUNT) * 256 / COUNT.\n' +
+        '  ADD R0, R14, PIX\n' +
+        '  MOD R0, R0, COUNT\n' +
+        '  MOV R1, 256\n' +
+        '  MUL R0, R0, R1\n' +
+        '  DIV R0, R0, COUNT\n' +
+        '  WHSL R0, 255, 128\n'),
     assembled: [],
     state: new pattern_engine.State(),
   };
@@ -143,7 +162,7 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
     }
   };
 
-  $scope.assemble();
+  //$scope.assemble();
 });
 
 patternApp.filter('getbit', function () {
