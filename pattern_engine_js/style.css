@@ -12,6 +12,7 @@
 textarea {
     font-family: inherit;
     font-size: inherit;
+    width: 500px;
 }
 
 table {
@@ -56,6 +57,13 @@ td {
     font-family: monospace;
     margin-left: auto;
     margin-right: auto;
+}
+
+.errors {
+    border: 1px solid red;
+    background: #ff9999;
+    padding: 10px;
+    font-family: monospace;
 }
 
 .inputTitle {

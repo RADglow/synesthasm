@@ -470,7 +470,7 @@ pattern_engine.assemble = function(text) {
   var lines = text.split('\n');
   var labelsToAddresses = {};
   var i = 0;
-  var assembled = $.map(lines, function(line) {
+  var assembled = $.map(lines, function(line, lineNumber) {
     var label = pattern_engine.parseLabel(line);
     var instruction = null;
     var byteCode = null;
@@ -482,7 +482,12 @@ pattern_engine.assemble = function(text) {
       labelsToAddresses[label] = i;
     } else {
       // Only try to parse it as instruction if it wasn't a label.
-      instruction = pattern_engine.parseLine(line);
+      try {
+        instruction = pattern_engine.parseLine(line);
+      } catch (e) {
+        e.message = "Line " + lineNumber + ": " + e.message;
+        throw e;
+      }
       if (instruction !== null) {
         byteCode = instruction.toBytecode();
         address = i;

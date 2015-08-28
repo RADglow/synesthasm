@@ -69,7 +69,6 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
 });
 
 patternApp.controller('BytecodeCtrl', function ($scope) {
-
   $scope.progData = {
     asmInput: (
         '  // Are we on pixel zero?\n' +
@@ -95,6 +94,8 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
     state: new pattern_engine.State(),
   };
 
+  $scope.errors = '';
+
   // TODO: rework this.
   $scope.bits = [];
   for (var i = 31; i >= 0; i--) {
@@ -111,11 +112,19 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
   };
 
   $scope.assemble = function() {
-    $scope.progData.assembled = pattern_engine.assemble(
-        $scope.progData.asmInput);
+    $scope.errors = '';
+    $scope.reset();
+    $scope.progData.assembled = [];
+    try {
+      $scope.progData.assembled = pattern_engine.assemble(
+          $scope.progData.asmInput);
+    } catch (e) {
+      $scope.errors = e.toString();
+      throw e;
+    }
   };
 
-  $scope.reboot = function () {
+  $scope.reset = function () {
     $scope.progData.state = new pattern_engine.State();
   };
 
@@ -156,13 +165,17 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
         maxPc = item.address;
       }
     });
-    while ($scope.progData.state.pc <= maxPc) {
-      // TODO: add timeout.
+    for (var i = 0; i < 10000; i++) {
+      if ($scope.progData.state.pc > maxPc) {
+        $scope.progData.state.pc = 0;
+        return;
+      }
       $scope.step();
     }
+    throw new Error('Program did not finish within 10000 cycles.');
   };
 
-  //$scope.assemble();
+  $scope.assemble();
 });
 
 patternApp.filter('getbit', function () {

@@ -19,28 +19,12 @@
         -->
         <div class="asmInput">
             <textarea ng-model="progData.asmInput" name="assemblerInputText" cols=30 rows=20>
-  // Are we on pixel zero?
-  CMP PIX, 0
-  JNE no_update
-  // Yup, pixel zero.
-  // Is it time to update? We use R15 for previous update time.
-  SUB R0, TICKS, R15
-  CMP R0, 100
-  JLE no_update
-  // Yes, time to update.
-  MOV R15, TICKS
-  ADD R14, R14, 1  // Increment current position.
-no_update:
-  // Calculate hue as ((PIX + R14) % COUNT) * 256 / COUNT.
-  ADD R0, R14, PIX
-  MOD R0, R0, COUNT
-  MOV R1, 256
-  MUL R0, R0, R1
-  DIV R0, R0, COUNT
-  WHSL R0, 255, 128
             </textarea>
             <div class="buttons">
                 <input type="button" value="Assemble" ng-click="assemble()" />
+            </div>
+            <div class="errors" ng-show="errors">
+              {{errors}}
             </div>
         </div>
         <!--
@@ -54,7 +38,7 @@ no_update:
         </div>
         -->
         <div class="actionButtons">
-            <input type="button" value="Reboot" ng-click="reboot()" />
+            <input type="button" value="Reset" ng-click="reset()" />
             <input type="button" value="Step" ng-click="step()" />
             <input type="button" value="Run" ng-click="run()" />
         </div>
