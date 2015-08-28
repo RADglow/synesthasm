@@ -36,6 +36,14 @@ pattern_engine.State.prototype.clone = function() {
 
 // ------------------------------------------------------------------
 
+pattern_engine.expectParameterCount = function(expected, tokens) {
+  if (tokens.length != (expected + 1)) {
+    throw new Error('Expected ' + expected + ' parameter' +
+        ((expected == 1) ? '' : 's') + ' when parsing ' +
+        tokens[0]);
+  }
+};
+
 // Parses the operand as a register, returns the register number
 // as an integer, or raises an error.
 pattern_engine.parseRegister = function(token) {
@@ -91,12 +99,10 @@ pattern_engine.Operand = function(token, long_form_ok) {
     }
     return;
   }
-  $.each(pattern_engine.S_REGISTERS, function(k, v) {
-    if (token == k) {
-      this.s = v;
-      return;
-    }
-  });
+  if (token in pattern_engine.S_REGISTERS) {
+    this.s = pattern_engine.S_REGISTERS[token];
+    return;
+  }
   if (long_form_ok) {
     this.value = pattern_engine.parseLiteral(token, -32768, 32767);
     if (this.value < 0 || this.value > 255) {
@@ -145,6 +151,7 @@ pattern_engine.Operand.prototype.toBytecode = function() {
 
 // MOV instruction.
 pattern_engine.Mov = function(tokens) {
+  pattern_engine.expectParameterCount(2, tokens);
   this.dest_r = pattern_engine.parseRegister(tokens[1]);
   this.src = new pattern_engine.Operand(tokens[2], true);
 };
@@ -176,6 +183,7 @@ pattern_engine.Mov.prototype.toBytecode = function() {
 
 // CMP instruction.
 pattern_engine.Cmp = function(tokens) {
+  pattern_engine.expectParameterCount(2, tokens);
   this.srcs = [
     new pattern_engine.Operand(tokens[1]),
     new pattern_engine.Operand(tokens[2]),
@@ -223,6 +231,7 @@ pattern_engine.JMP_INSTRUCTIONS = {
 
 // JMP instruction.
 pattern_engine.Jmp = function(tokens) {
+  pattern_engine.expectParameterCount(1, tokens);
   this.instruction = tokens[0].toUpperCase();
   if (!(this.instruction in pattern_engine.JMP_INSTRUCTIONS)) {
     throw new Error('Invalid branch instruction: ' + tokens[0]);
@@ -267,8 +276,69 @@ pattern_engine.Jmp.prototype.toBytecode = function() {
 
 // ------------------------------------------------------------------
 
+pattern_engine.DATA_INSTRUCTION_OPCODES = {
+  ADD: 16,
+  SUB: 17,
+  MUL: 18,
+  DIV: 19,
+  MOD: 20,
+};
+
+pattern_engine.DATA_INSTRUCTION_FUNCTIONS = {
+  ADD: function(a, b) { return a + b; },
+  SUB: function(a, b) { return a - b; },
+  MUL: function(a, b) { return a * b; },
+  DIV: function(a, b) { return Math.floor(a / b); },
+  MOD: function(a, b) { return a % b; },
+};
+
+// Data instructions.
+pattern_engine.Data = function(tokens) {
+  pattern_engine.expectParameterCount(3, tokens);
+  this.instruction = tokens[0].toUpperCase();
+  this.dest_r = pattern_engine.parseRegister(tokens[1]);
+  this.srcs = [
+    new pattern_engine.Operand(tokens[2]),
+    new pattern_engine.Operand(tokens[3]),
+  ];
+  if (!(this.instruction in pattern_engine.DATA_INSTRUCTION_OPCODES)) {
+    throw new Error('Invalid instruction: ' + this.instruction);
+  }
+};
+
+// Pretty prints data instruction..
+pattern_engine.Data.prototype.toString = function() {
+  return this.instruction + ' R' + this.dest_r + ', ' +
+    this.srcs[0].toString() + ', ' + this.srcs[1].toString();
+};
+
+// Executes data instruction.
+pattern_engine.Data.prototype.execute = function(state) {
+  var newState = state.clone();
+  var fun = pattern_engine.DATA_INSTRUCTION_FUNCTIONS[this.instruction];
+  var v0 = this.srcs[0].getValue(state);
+  var v1 = this.srcs[1].getValue(state);
+  // Reduce to 32 bits and make signed.
+  var val = (fun(v0, v1) & 0xffffffff) >> 0;
+  newState.r[this.dest_r] = val;
+  newState.pc++;
+  return newState;
+};
+
+// Returns data bytecode.
+pattern_engine.Data.prototype.toBytecode = function() {
+  return (
+      (pattern_engine.DATA_INSTRUCTION_OPCODES[this.instruction] << 27) |
+      (this.dest_r << 18) |
+      (this.srcs[0].toBytecode() << 9) |
+      this.srcs[1].toBytecode()
+      ) >>> 0;
+};
+
+// ------------------------------------------------------------------
 // Strip (WRGB, WHSL) instructions.
 pattern_engine.WriteStrip = function(tokens) {
+  pattern_engine.expectParameterCount(3, tokens);
   if (tokens[0] == 'WRGB') {
     this.rgb = true;
   } else if (tokens[0] == 'WHSL') {
@@ -336,11 +406,11 @@ pattern_engine.parseLine = function(line) {
     wrgb: pattern_engine.WriteStrip,
     whsl: pattern_engine.WriteStrip,
 
-    add: null,
-    sub: null,
-    mul: null,
-    div: null,
-    mod: null,
+    add: pattern_engine.Data,
+    sub: pattern_engine.Data,
+    mul: pattern_engine.Data,
+    div: pattern_engine.Data,
+    mod: pattern_engine.Data,
   };
 
   // Strip off comments.
@@ -363,7 +433,14 @@ pattern_engine.parseLine = function(line) {
 
 // ------------------------------------------------------------------
 
-// XXX: document.
+// Splits given string (program code) into lines, assembles each line
+// and returns an array of objects, where each object is {
+//   asm: string, original line
+//   instruction: instance of parsed instruction, if the line contained one
+//   byteCode: integer, binary representation of the instruction, if the
+//       line contained an instruction
+//   address: integer, address of the command, if the line contained an
+//       instruction
 pattern_engine.assemble = function(text) {
   var lines = text.split('\n');
   var assembled = $.map(lines, function(line) {

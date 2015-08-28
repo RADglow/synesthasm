@@ -33,6 +33,15 @@ QUnit.test('MOV parse', function(assert) {
   mov = pattern_engine.parseLine('MOV R15, -32768');
   assert.strictEqual(mov.toString(), 'MOV R15, -32768');
 
+  mov = pattern_engine.parseLine('MOV R15, TICKS');
+  assert.strictEqual(mov.toString(), 'MOV R15, S0');
+
+  mov = pattern_engine.parseLine('MOV R15, PIX');
+  assert.strictEqual(mov.toString(), 'MOV R15, S1');
+
+  mov = pattern_engine.parseLine('MOV R15, COUNT');
+  assert.strictEqual(mov.toString(), 'MOV R15, S2');
+
   assert.throws(function() {
     pattern_engine.parseLine('MOV R15, -32769');
   }, /Literal out of range/);
@@ -40,19 +49,31 @@ QUnit.test('MOV parse', function(assert) {
   assert.throws(function() {
     pattern_engine.parseLine('MOV R15, 32768');
   }, /Literal out of range/);
+
+  assert.throws(function() {
+    pattern_engine.parseLine('MOV R15, 3, 3');
+  }, /Expected 2 parameters when parsing MOV/);
 });
 
 QUnit.test('MOV execute', function(assert) {
-  var state1 = new pattern_engine.State();
-  var state2 = pattern_engine.parseLine('MOV R0, 1').execute(state1);
-  assert.notEqual(state2, state1);
-  assert.equal(state2.r[0], 1);
-  assert.equal(state2.r[1], 0);
-  assert.equal(state2.pc, 1);
-  var state3 = pattern_engine.parseLine('MOV R1, R0').execute(state2);
-  assert.equal(state3.r[0], 1);
-  assert.equal(state3.r[1], 1);
-  assert.equal(state3.pc, 2);
+  var state = new pattern_engine.State();
+  state = pattern_engine.parseLine('MOV R0, 1').execute(state);
+  assert.equal(state.r[0], 1);
+  assert.equal(state.r[1], 0);
+  assert.equal(state.pc, 1);
+  state = pattern_engine.parseLine('MOV R1, R0').execute(state);
+  assert.equal(state.r[0], 1);
+  assert.equal(state.r[1], 1);
+  assert.equal(state.pc, 2);
+  state.s[0] = 100;
+  state.s[1] = 101;
+  state.s[2] = 102;
+  state = pattern_engine.parseLine('MOV R0, S0').execute(state);
+  assert.equal(state.r[0], 100);
+  state = pattern_engine.parseLine('MOV R1, S1').execute(state);
+  assert.equal(state.r[1], 101);
+  state = pattern_engine.parseLine('MOV R2, S2').execute(state);
+  assert.equal(state.r[2], 102);
 });
 
 QUnit.test('MOV toBytecode', function(assert) {
@@ -104,6 +125,10 @@ QUnit.test('strip command parse', function(assert) {
   assert.throws(function() {
     pattern_engine.parseLine('WHSL R0, R0, 256');
   }, /Literal out of range/);
+
+  assert.throws(function() {
+    pattern_engine.parseLine('WHSL R15');
+  }, /Expected 3 parameters when parsing WHSL/);
 });
 
 var FakePixel = function() {
@@ -171,6 +196,10 @@ QUnit.test('CMP parse', function(assert) {
   assert.throws(function() {
     pattern_engine.parseLine('CMP R0, -1');
   }, /Literal out of range/);
+
+  assert.throws(function() {
+    pattern_engine.parseLine('CMP R15');
+  }, /Expected 2 parameters when parsing CMP/);
 });
 
 QUnit.test('CMP execute', function(assert) {
@@ -214,6 +243,10 @@ QUnit.test('JMP parse', function(assert) {
   assert.throws(function() {
     pattern_engine.parseLine('JMP 65536');
   }, /Literal out of range/);
+
+  assert.throws(function() {
+    pattern_engine.parseLine('JMP R15 1');
+  }, /Expected 1 parameter when parsing JMP/);
 });
 
 QUnit.test('JMP execute', function(assert) {
@@ -252,4 +285,60 @@ QUnit.test('JMP toBytecode', function(assert) {
       pattern_engine.parseLine('JNE 0').toBytecode(),
       //10987654321098765432109876543210
       0b00010000100000000000000000000000);
+});
+
+QUnit.test('data parse', function(assert) {
+  var mov = pattern_engine.parseLine('ADD R0, 1, R2');
+  assert.strictEqual(mov.toString(), 'ADD R0, 1, R2');
+
+  var mov = pattern_engine.parseLine('SUB R0, R0, R0');
+  assert.strictEqual(mov.toString(), 'SUB R0, R0, R0');
+
+  assert.throws(function() {
+    pattern_engine.parseLine('ADD R0, 1, 256');
+  }, /Literal out of range/);
+
+  assert.throws(function() {
+    pattern_engine.parseLine('ADD R15, 1');
+  }, /Expected 3 parameters when parsing ADD/);
+});
+
+QUnit.test('data execute', function(assert) {
+  var state = new pattern_engine.State();
+  state = pattern_engine.parseLine('ADD R3, 3, 4').execute(state);
+  assert.equal(state.r[3], 7);
+  assert.equal(state.pc, 1);
+  state = pattern_engine.parseLine('SUB R5, R3, 1').execute(state);
+  assert.equal(state.r[5], 6);
+  state = pattern_engine.parseLine('SUB R5, R5, 7').execute(state);
+  assert.equal(state.r[5], -1);
+  state = pattern_engine.parseLine('MUL R0, 3, 5').execute(state);
+  assert.equal(state.r[0], 15);
+  state = pattern_engine.parseLine('DIV R0, 5, 3').execute(state);
+  assert.equal(state.r[0], 1);
+  state = pattern_engine.parseLine('MOD R0, 5, 3').execute(state);
+  assert.equal(state.r[0], 2);
+});
+
+QUnit.test('data toBytecode', function(assert) {
+  assert.equal(
+      pattern_engine.parseLine('ADD R3, 1, 2').toBytecode(),
+      //10987654321098765432109876543210
+      0b10000000000011000000001000000010);
+  assert.equal(
+      pattern_engine.parseLine('SUB R3, 1, 2').toBytecode(),
+      //10987654321098765432109876543210
+      0b10001000000011000000001000000010);
+  assert.equal(
+      pattern_engine.parseLine('MUL R3, 1, 2').toBytecode(),
+      //10987654321098765432109876543210
+      0b10010000000011000000001000000010);
+  assert.equal(
+      pattern_engine.parseLine('DIV R3, 1, 2').toBytecode(),
+      //10987654321098765432109876543210
+      0b10011000000011000000001000000010);
+  assert.equal(
+      pattern_engine.parseLine('MOD R3, 1, 2').toBytecode(),
+      //10987654321098765432109876543210
+      0b10100000000011000000001000000010);
 });
