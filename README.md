@@ -16,8 +16,7 @@ synesthasm is a simple bytecode "virtual machine".
 ## Operands
 
 Most source operands can take one of the following forms:
-* nnn or -nnn: signed 8-bit immediate value: -128 .. 127. Since the registers
-  are 32 bits wide, the operations will automatically sign-extend the values.
+* nnn: unsigned 8-bit immediate value.
 * R0 .. R15: register
 * S0 .. S2: special value register. Each of these registers also has an easy to
   memorize alias:
@@ -31,7 +30,7 @@ Most source operands can take one of the following forms:
 MOV dest, src
 
 dest: register
-src: operand. Immediate values can be 16 bits wide, still sign extended.
+src: operand. Immediate values can be 16 bits wide and are signed. Negative values get sign extended when assigning.
 ~~~
 
 ## Data instructions

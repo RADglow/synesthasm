@@ -18,14 +18,17 @@ QUnit.test('MOV parse', function(assert) {
   mov = pattern_engine.parseLine('MOV R0, R1');
   assert.strictEqual(mov.toString(), 'MOV R0, R1');
 
-  mov = pattern_engine.parseLine('MOV R15, 127');
-  assert.strictEqual(mov.toString(), 'MOV R15, 127');
+  mov = pattern_engine.parseLine('MOV R15, 0xf');
+  assert.strictEqual(mov.toString(), 'MOV R15, 15');
 
-  mov = pattern_engine.parseLine('MOV R15, -128');
-  assert.strictEqual(mov.toString(), 'MOV R15, -128');
+  mov = pattern_engine.parseLine('MOV R15, 255');
+  assert.strictEqual(mov.toString(), 'MOV R15, 255');
 
   mov = pattern_engine.parseLine('MOV R15, 32767');
   assert.strictEqual(mov.toString(), 'MOV R15, 32767');
+
+  mov = pattern_engine.parseLine('MOV R15, -1');
+  assert.strictEqual(mov.toString(), 'MOV R15, -1');
 
   mov = pattern_engine.parseLine('MOV R15, -32768');
   assert.strictEqual(mov.toString(), 'MOV R15, -32768');
@@ -45,7 +48,7 @@ QUnit.test('MOV execute', function(assert) {
   assert.notEqual(state2, state1);
   assert.equal(state2.r[0], 1);
   assert.equal(state2.r[1], 0);
-  state3 = pattern_engine.parseLine('MOV R1, R0').execute(state2);
+  var state3 = pattern_engine.parseLine('MOV R1, R0').execute(state2);
   assert.equal(state3.r[0], 1);
   assert.equal(state3.r[1], 1);
 });
@@ -60,13 +63,13 @@ QUnit.test('MOV toBytecode', function(assert) {
       //10987654321098765432109876543210
       0b00001000000000100000000001111111);
   assert.equal(
-      pattern_engine.parseLine('MOV R0, -1').toBytecode(),
+      pattern_engine.parseLine('MOV R0, 255').toBytecode(),
       //10987654321098765432109876543210
       0b00001000000000100000000011111111);
   assert.equal(
-      pattern_engine.parseLine('MOV R0, 128').toBytecode(),
+      pattern_engine.parseLine('MOV R0, -1').toBytecode(),
       //10987654321098765432109876543210
-      0b00001000000000000000000010000000);
+      0b00001000000000001111111111111111);
   assert.equal(
       pattern_engine.parseLine('MOV R15, 32767').toBytecode(),
       //10987654321098765432109876543210
@@ -91,6 +94,14 @@ QUnit.test('strip command parse', function(assert) {
 
   mov = pattern_engine.parseLine('WHSL R0, R1, R2');
   assert.strictEqual(mov.toString(), 'WHSL R0, R1, R2');
+
+  assert.throws(function() {
+    pattern_engine.parseLine('WHSL R0, R0, -1');
+  }, /Literal out of range/);
+
+  assert.throws(function() {
+    pattern_engine.parseLine('WHSL R0, R0, 256');
+  }, /Literal out of range/);
 });
 
 var FakePixel = function() {

@@ -71,7 +71,7 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
 patternApp.controller('BytecodeCtrl', function ($scope) {
 
   $scope.progData = {
-    asmInput: 'MOV R0, 255\n//comment\nWRGB R0, 127, 127',
+    asmInput: 'MOV R0, 130\n//comment\nWHSL R0, 255, 127',
     assembled: [],
     pc: 0,
     state: new pattern_engine.State(),

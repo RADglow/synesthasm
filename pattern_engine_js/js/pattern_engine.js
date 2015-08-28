@@ -81,19 +81,19 @@ pattern_engine.Operand = function(token, long_form_ok) {
       return;
     }
   });
-  if (!/^-?\d+$/.test(token)) {
+  if (!/^(?:-?\d+|0[xX][0-9a-fA-F]+)$/.test(token)) {
     throw new Error("Invalid literal value in operand: " + token);
   }
-  v = parseInt(token, 10);
+  v = parseInt(token, 0);
   if (long_form_ok) {
     if (v < -32768 || v > 32767) {
       throw new Error("Literal out of range: " + token);
     }
-    if (v < -128 || v > 127) {
+    if (v < 0 || v > 255) {
       this.long_form = true;
     }
   } else {
-    if (v < -128 || v > 127) {
+    if (v < 0 || v > 255) {
       throw new Error("Literal out of range: " + token);
     }
   }
