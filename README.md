@@ -7,8 +7,8 @@ synesthasm is a simple bytecode "virtual machine".
 * The virtual machine has 16 registers, named R0..R15. They contain 32 bits
   wide signed integers.
 * There is a Program Counter, which is not directly accessible.
-* There is a Status Register, containing Z (zero) and P (positive) flags.
-  Status Register is set with CMP instruction and accessed using Jxx
+* There is a Status Register, containing Z (zero) and P (positive or zero)
+  flags. Status Register is set with CMP instruction and accessed using Jxx
   conditional branch instructions.
 
 # Instructions
@@ -130,7 +130,7 @@ cond encodes which flags must be set or not set.
 
 CMP (opcode 3):
 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
-0  0  0  0  1  1  0  0  0  0  0  0  0  0  <- src1 -----------------> <- src2 ----------------->
+0  0  0  1  1  0  0  0  0  0  0  0  0  0  <- src1 -----------------> <- src2 ----------------->
 
 WRGB (opcode 14):
 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00

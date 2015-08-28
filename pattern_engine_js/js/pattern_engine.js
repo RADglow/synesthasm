@@ -16,8 +16,8 @@ pattern_engine.State = function() {
   this.r = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   // S registers: TICKS, PIX, COUNT.
   this.s = [0, 0, 0];
-  this.z = false;
-  this.p = false;
+  this.z = false;  // zero
+  this.p = false;  // positive
 };
 
 pattern_engine.State.prototype.clone = function() {
@@ -166,6 +166,41 @@ pattern_engine.Mov.prototype.toBytecode = function() {
 
 // ------------------------------------------------------------------
 
+// CMP instruction.
+pattern_engine.Cmp = function(tokens) {
+  this.srcs = [
+    new pattern_engine.Operand(tokens[1]),
+    new pattern_engine.Operand(tokens[2]),
+  ];
+};
+
+// Pretty prints CMP instruction..
+pattern_engine.Cmp.prototype.toString = function() {
+  return "CMP " + this.srcs[0].toString() + ", " + this.srcs[1].toString();
+};
+
+// Executes CMP instruction.
+pattern_engine.Cmp.prototype.execute = function(state) {
+  var newState = state.clone();
+  var v0 = this.srcs[0].getValue(state);
+  var v1 = this.srcs[1].getValue(state);
+  var diff = (v0 - v1) >> 0;
+  newState.z = (diff === 0);
+  newState.p = (diff >= 0);
+  return newState;
+};
+
+// Returns CMP bytecode.
+pattern_engine.Cmp.prototype.toBytecode = function() {
+  return (
+      (3 << 27) |  // opcode
+      (this.srcs[0].toBytecode() << 9) |
+      this.srcs[1].toBytecode()
+      ) >>> 0;
+};
+
+// ------------------------------------------------------------------
+
 // Strip (WRGB, WHSL) instructions.
 pattern_engine.WriteStrip = function(tokens) {
   if (tokens[0] == 'WRGB') {
@@ -220,7 +255,7 @@ pattern_engine.parseLine = function(line) {
   var instruction_to_constructor = {
     mov: pattern_engine.Mov,
 
-    cmp: null,
+    cmp: pattern_engine.Cmp,
 
     jmp: null,
     jeq: null,
