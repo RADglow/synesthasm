@@ -6,7 +6,7 @@
 }
 
 .strip {
-    color: white;
+  color: white;
 }
 
 textarea {
@@ -17,7 +17,7 @@ textarea {
 
 table {
     border: 1px solid #000;
-    border-collapse: separate;
+    border-collapse: collapse;
     table-layout: fixed;
     font-family: monospace;
     text-align: left;
@@ -26,6 +26,7 @@ table {
 th,
 td {
     border: solid 1px;
+    padding: 2px;
 }
 
 .binaryViewer table {
@@ -73,4 +74,8 @@ td {
 .actionButtons {
     float: none;
     clear: both;
+}
+
+input.pixelCount {
+    width: 3em;
 }

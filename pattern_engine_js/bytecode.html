@@ -40,7 +40,18 @@
         <div class="actionButtons">
             <input type="button" value="Reset" ng-click="reset()" />
             <input type="button" value="Step" ng-click="step()" />
-            <input type="button" value="Run" ng-click="run()" />
+            <input type="button" value="Run pixel" ng-click="runPixel()" />
+            <input type="button" value="Run frame" ng-click="runFrame()" />
+            <input type="button" value="Start animation" ng-click="startAnimation()" />
+            <input type="button" value="Stop animation" ng-click="stopAnimation()" />
+            Pixel count: <input ng-model="strip.pixelCount" class="pixelCount" ng-change="changePixelCount()">
+            Current pixel: <input ng-model="strip.currentPixel" class="pixelCount" readonly>
+            Current tick: <input ng-model="strip.currentTick" class="pixelCount" readonly>
+        </div>
+        <div class="strip">
+            <div ng-repeat="pixel in strip.pixels" class="pixel" ng-style="{'background-color': pixel}">
+                {{$index}}
+            </div>
         </div>
         <div class="bytecodeMachine">
             <div class="desc">Registers</div>
@@ -68,7 +79,7 @@
         </div>
         <div class="tokenizedOutput">
             <div class="desc">Assembly input and bytecode</div>
-            <table>
+            <table class="assemblyTable">
                 <tr>
                     <th>#</th>
                     <th>Code</th>
