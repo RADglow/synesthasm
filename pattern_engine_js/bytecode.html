@@ -71,7 +71,7 @@
                     <th>Code</th>
                     <th ng-repeat="bit in bits">{{bit}}</th>
                 </tr>
-                <tr ng-repeat="inst in progData.assembled" ng-class="{'selected': progData.pc == inst.address }">
+                <tr ng-repeat="inst in progData.assembled" ng-class="{'selected': progData.state.pc == inst.address }">
                   <td>{{inst.address}}</td>
                   <td>{{inst.asm}}</td>
                   <td ng-repeat="bit in bits">

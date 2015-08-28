@@ -18,6 +18,8 @@ pattern_engine.State = function() {
   this.s = [0, 0, 0];
   this.z = false;  // zero
   this.p = false;  // positive
+
+  this.pc = 0;
 };
 
 pattern_engine.State.prototype.clone = function() {
@@ -26,6 +28,7 @@ pattern_engine.State.prototype.clone = function() {
   state.s = this.s.slice();
   state.z = this.z;
   state.p = this.p;
+  state.pc = this.pc;
   return state;
 };
 
@@ -44,6 +47,19 @@ pattern_engine.parseRegister = function(token) {
     throw new Error('Invalid register: ' + token);
   }
   return r;
+};
+
+// Parses given token as a literal, enforcing that it is between
+// minRange and maxRange (both inclusive).
+pattern_engine.parseLiteral = function(token, minRange, maxRange) {
+  if (!/^(?:-?\d+|0[xX][0-9a-fA-F]+)$/.test(token)) {
+    throw new Error("Invalid literal value: " + token);
+  }
+  var v = parseInt(token, 0);
+  if (v < minRange || v > maxRange) {
+    throw new Error("Literal out of range: " + token);
+  }
+  return v;
 };
 
 /**
@@ -81,23 +97,14 @@ pattern_engine.Operand = function(token, long_form_ok) {
       return;
     }
   });
-  if (!/^(?:-?\d+|0[xX][0-9a-fA-F]+)$/.test(token)) {
-    throw new Error("Invalid literal value in operand: " + token);
-  }
-  v = parseInt(token, 0);
   if (long_form_ok) {
-    if (v < -32768 || v > 32767) {
-      throw new Error("Literal out of range: " + token);
-    }
-    if (v < 0 || v > 255) {
+    this.value = pattern_engine.parseLiteral(token, -32768, 32767);
+    if (this.value < 0 || this.value > 255) {
       this.long_form = true;
     }
   } else {
-    if (v < 0 || v > 255) {
-      throw new Error("Literal out of range: " + token);
-    }
+    this.value = pattern_engine.parseLiteral(token, 0, 255);
   }
-  this.value = v;
 };
 
 pattern_engine.Operand.prototype.toString = function() {
@@ -151,6 +158,7 @@ pattern_engine.Mov.prototype.toString = function() {
 pattern_engine.Mov.prototype.execute = function(state) {
   var newState = state.clone();
   newState.r[this.dest_r] = this.src.getValue(state);
+  newState.pc++;
   return newState;
 };
 
@@ -187,6 +195,7 @@ pattern_engine.Cmp.prototype.execute = function(state) {
   var diff = (v0 - v1) >> 0;
   newState.z = (diff === 0);
   newState.p = (diff >= 0);
+  newState.pc++;
   return newState;
 };
 
@@ -196,6 +205,63 @@ pattern_engine.Cmp.prototype.toBytecode = function() {
       (3 << 27) |  // opcode
       (this.srcs[0].toBytecode() << 9) |
       this.srcs[1].toBytecode()
+      ) >>> 0;
+};
+
+// ------------------------------------------------------------------
+
+// Map from jump instruction names to their matcher bitmask (P, NP, Z, NZ).
+pattern_engine.JMP_INSTRUCTIONS = {
+  JMP: 0x0,  // 0b0000
+  JEQ: 0x2,  // 0b0010
+  JNE: 0x1,  // 0b0001
+  JG:  0x9,  // 0b1001
+  JGE: 0x8,  // 0b1000
+  JL:  0x5,  // 0b0101
+  JLE: 0x4,  // 0b0100
+};
+
+// JMP instruction.
+pattern_engine.Jmp = function(tokens) {
+  this.instruction = tokens[0].toUpperCase();
+  if (!(this.instruction in pattern_engine.JMP_INSTRUCTIONS)) {
+    throw new Error('Invalid branch instruction: ' + tokens[0]);
+  }
+  // TODO: implement labels.
+  this.address = pattern_engine.parseLiteral(tokens[1], 0, 0xffff);
+};
+
+// Pretty prints JMP instruction..
+pattern_engine.Jmp.prototype.toString = function() {
+  return this.instruction + " " + this.address;
+};
+
+// Executes JMP instruction.
+pattern_engine.Jmp.prototype.execute = function(state) {
+  var comparison_pattern = pattern_engine.JMP_INSTRUCTIONS[this.instruction];
+  var p = !!(comparison_pattern & 8);
+  var np = !!(comparison_pattern & 4);
+  var z = !!(comparison_pattern & 2);
+  var nz = !!(comparison_pattern & 1);
+
+  var fail = (p && !state.p) || (np && state.p) ||
+    (z && !state.z) || (nz && state.z);
+
+  var newState = state.clone();
+  if (fail) {
+    newState.pc++;
+  } else {
+    newState.pc = this.address;
+  }
+  return newState;
+};
+
+// Returns JMP bytecode.
+pattern_engine.Jmp.prototype.toBytecode = function() {
+  return (
+      (2 << 27) |  // opcode
+      (pattern_engine.JMP_INSTRUCTIONS[this.instruction] << 23) |
+      this.address
       ) >>> 0;
 };
 
@@ -235,7 +301,9 @@ pattern_engine.WriteStrip.prototype.execute = function(state, pixel) {
   } else {
     pixel.setHsl(vals[0], vals[1], vals[2]);
   }
-  return state.clone();
+  var newState = state.clone();
+  newState.pc++;
+  return newState;
 };
 
 // Returns bytecode.
@@ -257,13 +325,13 @@ pattern_engine.parseLine = function(line) {
 
     cmp: pattern_engine.Cmp,
 
-    jmp: null,
-    jeq: null,
-    jne: null,
-    jg: null,
-    jge: null,
-    jl: null,
-    jle: null,
+    jmp: pattern_engine.Jmp,
+    jeq: pattern_engine.Jmp,
+    jne: pattern_engine.Jmp,
+    jg: pattern_engine.Jmp,
+    jge: pattern_engine.Jmp,
+    jl: pattern_engine.Jmp,
+    jle: pattern_engine.Jmp,
 
     wrgb: pattern_engine.WriteStrip,
     whsl: pattern_engine.WriteStrip,

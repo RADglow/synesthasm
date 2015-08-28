@@ -73,7 +73,6 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
   $scope.progData = {
     asmInput: 'MOV R0, 130\n//comment\nWHSL R0, 255, 127',
     assembled: [],
-    pc: 0,
     state: new pattern_engine.State(),
   };
 
@@ -99,7 +98,6 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
 
   $scope.reboot = function () {
     $scope.progData.state = new pattern_engine.State();
-    $scope.progData.pc = 0;
   };
 
   var pixelHandler = {
@@ -123,14 +121,13 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
   };
 
   $scope.step = function () {
-    var pc = $scope.progData.pc;
+    var pc = $scope.progData.state.pc;
     $.each($scope.progData.assembled, function(_, item) {
       if (item.address == pc) {
         $scope.progData.state = item.instruction.execute(
             $scope.progData.state, pixelHandler);
       }
     });
-    $scope.progData.pc++;
   };
 
   $scope.run = function() {
@@ -140,7 +137,7 @@ patternApp.controller('BytecodeCtrl', function ($scope) {
         maxPc = item.address;
       }
     });
-    while ($scope.progData.pc <= maxPc) {
+    while ($scope.progData.state.pc <= maxPc) {
       // TODO: add timeout.
       $scope.step();
     }

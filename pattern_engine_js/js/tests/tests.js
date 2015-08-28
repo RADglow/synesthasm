@@ -48,9 +48,11 @@ QUnit.test('MOV execute', function(assert) {
   assert.notEqual(state2, state1);
   assert.equal(state2.r[0], 1);
   assert.equal(state2.r[1], 0);
+  assert.equal(state2.pc, 1);
   var state3 = pattern_engine.parseLine('MOV R1, R0').execute(state2);
   assert.equal(state3.r[0], 1);
   assert.equal(state3.r[1], 1);
+  assert.equal(state3.pc, 2);
 });
 
 QUnit.test('MOV toBytecode', function(assert) {
@@ -134,9 +136,9 @@ QUnit.test('strip command execute', function(assert) {
   assert.equal(pixel.r, 255);
   assert.equal(pixel.g, 120);
   assert.equal(pixel.b, 10);
-  console.log(state);
-  console.log(state2);
-  // Make sure that state stays the same.
+  assert.equal(state2.pc, 1);
+  // Make sure that state stays the same, minus pc.
+  state2.pc = 0;
   assert.deepEqual(state2, state);
   pattern_engine.parseLine('WHSL 10, 20, R1').execute(
       state, pixel);
@@ -194,4 +196,60 @@ QUnit.test('CMP toBytecode', function(assert) {
       pattern_engine.parseLine('CMP R0, S0').toBytecode(),
       //10987654321098765432109876543210
       0b00011000000000100000000110000000);
+});
+
+QUnit.test('JMP parse', function(assert) {
+  var mov = pattern_engine.parseLine('JMP 0');
+  assert.strictEqual(mov.toString(), 'JMP 0');
+
+  var mov = pattern_engine.parseLine('JMP 0xffff');
+  assert.strictEqual(mov.toString(), 'JMP 65535');
+
+  mov = pattern_engine.parseLine('JNE 123');
+  assert.strictEqual(mov.toString(), 'JNE 123');
+
+  mov = pattern_engine.parseLine('JG 123');
+  assert.strictEqual(mov.toString(), 'JG 123');
+
+  assert.throws(function() {
+    pattern_engine.parseLine('JMP 65536');
+  }, /Literal out of range/);
+});
+
+QUnit.test('JMP execute', function(assert) {
+  var state = new pattern_engine.State();
+  state = pattern_engine.parseLine('JMP 5').execute(state);
+  assert.equal(state.pc, 5);
+  assert.equal(state.z, 0);
+  assert.equal(state.p, 0);
+  state = pattern_engine.parseLine('JEQ 10').execute(state);
+  assert.equal(state.pc, 6);
+  state = pattern_engine.parseLine('JNE 10').execute(state);
+  assert.equal(state.pc, 10);
+  state = pattern_engine.parseLine('CMP 1, 2').execute(state);
+  state = pattern_engine.parseLine('JL 15').execute(state);
+  assert.equal(state.pc, 15);
+  state = pattern_engine.parseLine('JLE 20').execute(state);
+  assert.equal(state.pc, 20);
+  state = pattern_engine.parseLine('JG 25').execute(state);
+  assert.equal(state.pc, 21);
+  state = pattern_engine.parseLine('JGE 25').execute(state);
+  assert.equal(state.pc, 22);
+  state = pattern_engine.parseLine('JEQ 25').execute(state);
+  assert.equal(state.pc, 23);
+});
+
+QUnit.test('JMP toBytecode', function(assert) {
+  assert.equal(
+      pattern_engine.parseLine('JMP 3').toBytecode(),
+      //10987654321098765432109876543210
+      0b00010000000000000000000000000011);
+  assert.equal(
+      pattern_engine.parseLine('JMP 0xffff').toBytecode(),
+      //10987654321098765432109876543210
+      0b00010000000000001111111111111111);
+  assert.equal(
+      pattern_engine.parseLine('JNE 0').toBytecode(),
+      //10987654321098765432109876543210
+      0b00010000100000000000000000000000);
 });
