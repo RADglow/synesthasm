@@ -378,7 +378,7 @@ pattern_engine.WriteStrip.prototype.toString = function() {
 // Executes strip write instruction.
 pattern_engine.WriteStrip.prototype.execute = function(state, pixel) {
   var vals = $.map(this.srcs, function(src) {
-    return src.getValue(state);
+    return (src.getValue(state) & 0xff) >>> 0;
   });
   if (this.rgb) {
     pixel.setRgb(vals[0], vals[1], vals[2]);

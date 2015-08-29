@@ -53,30 +53,16 @@ patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
     };
     */
 });
+// lightness: 0.5 * (registers.R0 % 2),
 
 // XXX: split out byte code controller from strip controller.
 patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
+  $scope.programs = $.map(programs, function(value, name) {
+    return {name: name, code: value};
+  });
+  $scope.programToLoad = null;
   $scope.progData = {
-    asmInput: (
-        '  // Are we on pixel zero?\n' +
-        '  CMP PIX, 0\n' +
-        '  JNE no_update\n' +
-        '  // Yup, pixel zero.\n' +
-        '  // Is it time to update? We use R15 for previous update time.\n' +
-        '  SUB R0, TICKS, R15\n' +
-        '  CMP R0, 100\n' +
-        '  JLE no_update\n' +
-        '  // Yes, time to update.\n' +
-        '  MOV R15, TICKS\n' +
-        '  ADD R14, R14, 1  // Increment current position.\n' +
-        'no_update:\n' +
-        '// Calculate hue as ((PIX + R14) % COUNT) * 256 / COUNT.\n' +
-        '  ADD R0, R14, PIX\n' +
-        '  MOD R0, R0, COUNT\n' +
-        '  MOV R1, 256\n' +
-        '  MUL R0, R0, R1\n' +
-        '  DIV R0, R0, COUNT\n' +
-        '  WHSL R0, 255, 128\n'),
+    asmInput: '//XXX',
     assembled: [],
     maxAddress: 0,
     state: new pattern_engine.State(),
@@ -119,6 +105,7 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
   };
 
   $scope.reset = function() {
+    $scope.stopAnimation();
     $scope.progData.state = new pattern_engine.State();
     $scope.strip.currentPixel = 0;
     $scope.strip.currentTick = 0;
@@ -185,6 +172,9 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
   $scope.runPixel = function() {
     for (var i = 0; i < 10000; i++) {
       if (!$scope.step()) {
+        if ($scope.strip.currentPixel == 0) {
+          $scope.strip.currentTick += 20;
+        }
         return;
       }
     }
@@ -195,7 +185,6 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     for (;;) {
       $scope.runPixel();
       if ($scope.strip.currentPixel == 0) {
-        $scope.strip.currentTick += 100;
         return;
       }
     }
@@ -208,10 +197,6 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     pixels: [],
   };
 
-  $scope.changePixelCount = function() {
-    $scope.reset();
-  };
-
   var animation = null;
 
   $scope.startAnimation = function() {
@@ -220,7 +205,7 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
       }
       animation = $interval(function() {
         $scope.runFrame();
-      }, 100);
+      }, 20);
   };
 
   $scope.stopAnimation = function() {
@@ -230,8 +215,17 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     }
   };
 
+  $scope.loadProgram = function() {
+    $scope.reset();
+    $scope.progData.asmInput = $scope.programToLoad.code();
+    $scope.assemble();
+  };
+
+  $scope.programToLoad = $scope.programs[0];
+  $scope.loadProgram();
+
   $scope.assemble();
-  $scope.changePixelCount();
+  $scope.reset();
 });
 
 patternApp.filter('getbit', function () {

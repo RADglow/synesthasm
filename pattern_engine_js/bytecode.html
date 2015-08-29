@@ -7,18 +7,24 @@
     <script src="third_party/angular.min.js"></script>
     <script src="third_party/jquery-1.11.3.js"></script>
     <script src="third_party/jquery.color-2.1.2.js"></script>
+    <script src="js/programs.js"></script>
     <script src="js/pattern_engine.js"></script>
     <script src="js/controllers.js"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 
 <body ng-controller="BytecodeCtrl">
+    <div class="programPicker">
+        Program:
+        <select ng-model="programToLoad" ng-options="prog.name for prog in programs">
+        <input type="button" value="Load" ng-click="loadProgram()">
+    </div>
     <div class="assembler">
         <!--
         <span class="inputTitle">Assembly input</span>
         -->
         <div class="asmInput">
-            <textarea ng-model="progData.asmInput" name="assemblerInputText" cols=30 rows=20>
+            <textarea ng-model="progData.asmInput" name="assemblerInputText" cols=30 rows=20 ng-change="reset()">
             </textarea>
             <div class="buttons">
                 <input type="button" value="Assemble" ng-click="assemble()" />
@@ -44,36 +50,31 @@
             <input type="button" value="Run frame" ng-click="runFrame()" />
             <input type="button" value="Start animation" ng-click="startAnimation()" />
             <input type="button" value="Stop animation" ng-click="stopAnimation()" />
-            Pixel count: <input ng-model="strip.pixelCount" class="pixelCount" ng-change="changePixelCount()">
+            Pixel count: <input ng-model="strip.pixelCount" class="pixelCount" ng-change="reset()">
             Current pixel: <input ng-model="strip.currentPixel" class="pixelCount" readonly>
             Current tick: <input ng-model="strip.currentTick" class="pixelCount" readonly>
         </div>
         <div class="strip">
-            <div ng-repeat="pixel in strip.pixels" class="pixel" ng-style="{'background-color': pixel}">
+            <div ng-repeat="pixel in strip.pixels track by $index" class="pixel"
+              ng-style="{'background-color': pixel}"
+              ng-class="{'activePixel': strip.currentPixel == $index }">
                 {{$index}}
             </div>
         </div>
         <div class="bytecodeMachine">
-            <div class="desc">Registers</div>
+            <div class="desc">Registers and flags</div>
             <table class="registers">
                 <tr>
                     <th ng-repeat="reg in progData.state.r track by $index">R{{$index}}</th>
+                    <th>P</th>
+                    <th>Z</th>
+                    <th>PC</th>
                 </tr>
                 <tr>
                     <td ng-repeat="reg in progData.state.r track by $index">{{reg}}</td>
-                </tr>
-            </table>
-        </div>
-        <div class="flags">
-            <div class="desc">Flags</div>
-            <table class="registers">
-                <tr>
-                    <th>P</th>
-                    <th>Z</th>
-                </tr>
-                <tr>
                     <td>{{progData.state.p ? "1" : "0"}}</td>
                     <td>{{progData.state.z ? "1" : "0"}}</td>
+                    <td>{{progData.state.pc}}</td>
                 </tr>
             </table>
         </div>
@@ -132,3 +133,4 @@
 </body>
 
 </html>
+<!-- vim: set sw=4 ts=4 sts=4 :-->
