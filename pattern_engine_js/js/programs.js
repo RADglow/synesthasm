@@ -23,7 +23,7 @@ programs.rainbow = function() {
       '  MOV R1, 256\n' +
       '  MUL R0, R0, R1\n' +
       '  DIV R0, R0, COUNT\n' +
-      '  WHSL R0, 255, 128\n'
+      '  WHSL R0, 255, 128'
   );
 };
 
@@ -46,26 +46,33 @@ programs.flash = function() {
       '  DIV R2, R14, 16\n' +
       '  MOD R2, R2, 2\n' +
       '  MUL R2, R2, 127\n' +
-      '  WHSL R0, 255, R2\n'
+      '  WHSL R0, 255, R2'
   );
 };
 
 programs.rgb = function() {
   return (
-      '  // Red\n' +
-      '  MOD R0, PIX, 3\n' +
-      '  CMP R0, 0\n' +
-      '  JEQ red\n' +
-      '  CMP R0, 1\n' +
-      '  JEQ green\n' +
+      '// Divide ticks by 200, getting a number that changes\n' +
+      '// 5 times a second.\n' +
+      'MOV R0, TICKS\n' +
+      'DIV R0, R0, 200\n' +
+      '// Then add the pixel number.\n' +
+      'ADD R0, R0 PIX\n' +
+      '// Divide by 3 and keep the remainder.\n' +
+      'MOD R0, R0, 3\n' +
+      '// Now R0 contains 0, 1 or 2.\n' +
+      'CMP R0, 0\n' +
+      'JEQ red\n' +
+      'CMP R0, 1\n' +
+      'JEQ green\n' +
       'blue:\n' +
-      '  WRGB 0, 0, 255\n' +
-      '  JMP end\n' +
+      'WRGB 0, 0, 255\n' +
+      'JMP end\n' +
       'red:\n' +
-      '  WRGB 255, 0, 0\n' +
-      '  JMP end\n' +
+      'WRGB 255, 0, 0\n' +
+      'JMP end\n' +
       'green:\n' +
-      '  WRGB 0, 255, 0\n' +
-      'end:\n'
+      'WRGB 0, 255, 0\n' +
+      'end:'
   );
 };

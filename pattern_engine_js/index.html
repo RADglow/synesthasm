@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en" ng-app="patternApp">
+
+<head>
+    <meta charset="utf-8">
+    <title>Pattern Engine Test</title>
+    <script src="third_party/angular.min.js"></script>
+    <script src="third_party/jquery-1.11.3.js"></script>
+    <script src="third_party/jquery.color-2.1.2.js"></script>
+    <script src="js/programs.js"></script>
+    <script src="js/pattern_engine.js"></script>
+    <script src="js/controllers.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body ng-controller="BytecodeCtrl">
+    <div class="program-picker">
+        <div class="box-title">Load program</div>
+        Program:
+        <select ng-model="programToLoad" ng-options="prog.name for prog in programs">
+        <input type="button" value="Load" ng-click="loadProgram()">
+    </div>
+    <div class="assembler">
+        <div class="asm-input">
+            <textarea ng-model="progData.asmInput" name="assemblerInputText" cols=30 rows=20 ng-change="reset()">
+            </textarea>
+            <div class="buttons">
+                <input type="button" value="Assemble & Start Animation" ng-click="startAnimation()" />
+                <input type="button" value="Stop" ng-click="stopAnimation()" />
+            </div>
+            <div class="errors" ng-show="errors">
+                {{errors}}
+            </div>
+        </div>
+        <div class="strip">
+            <div ng-repeat="pixel in strip.pixels track by $index" class="pixel"
+              ng-style="{'background-color': pixel}"
+              ng-class="{'active-pixel': strip.currentPixel == $index }">
+                {{$index}}
+            </div>
+            <div class="strip-pixel-count">
+                Pixel count: <input ng-model="strip.pixelCount" class="small-input" ng-change="reset()">
+            </div>
+        </div>
+        <div class="debug-box">
+            <div class="box-title">Debugger</div>
+            <div class="debug-buttons">
+                <input type="button" value="Reset" ng-click="reset()" />
+                <input type="button" value="Step" ng-click="step()" />
+                <input type="button" value="Run pixel" ng-click="runPixel()" />
+                <input type="button" value="Run frame" ng-click="runFrame()" />
+                Current pixel: <input ng-model="strip.currentPixel" class="small-input" readonly>
+                Current tick: <input ng-model="strip.currentTick" class="small-input" readonly>
+            </div>
+            <div class="floaty-debug-box">
+                <div>Registers and flags</div>
+                <table>
+                    <tr>
+                        <th ng-repeat="reg in progData.state.r track by $index">R{{$index}}</th>
+                        <th>P</th>
+                        <th>Z</th>
+                        <th>PC</th>
+                    </tr>
+                    <tr>
+                        <td ng-repeat="reg in progData.state.r track by $index">{{reg}}</td>
+                        <td>{{progData.state.p ? "1" : "0"}}</td>
+                        <td>{{progData.state.z ? "1" : "0"}}</td>
+                        <td>{{progData.state.pc}}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="floaty-debug-box">
+                <div>Pixel color output</div>
+                <table>
+                    <tr>
+                        <th>R</th>
+                        <th>G</th>
+                        <th>B</th>
+                        <th>H</th>
+                        <th>S</th>
+                        <th>L</th>
+                        <th>color</th>
+                    </tr>
+                    <tr>
+                        <td>{{pixel.r}}</td>
+                        <td>{{pixel.g}}</td>
+                        <td>{{pixel.b}}</td>
+                        <td>{{pixel.h}}</td>
+                        <td>{{pixel.s}}</td>
+                        <td>{{pixel.l}}</td>
+                        <td ng-style="pixel.style"></td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="bytecode-box">Assembly input and bytecode</div>
+            <table class="bytecode">
+                <tr>
+                    <th>#</th>
+                    <th>Code</th>
+                    <th ng-repeat="bit in bits">{{bit}}</th>
+                </tr>
+                <tr ng-repeat="inst in progData.assembled"
+                    ng-class="{'selected': progData.state.pc == inst.address }">
+                    <td>{{inst.address}}</td>
+                    <td>{{inst.asm}}</td>
+                    <td ng-repeat="bit in bits">
+                        {{inst.byteCode | getbit:(31 - $index)}}
+                    </td>
+              </tr>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>
+<!-- vim: set sw=4 ts=4 sts=4 :-->

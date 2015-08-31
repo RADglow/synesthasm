@@ -1,90 +1,44 @@
 var patternApp = angular.module('patternApp', []);
 
-// TODO: add back support for more than one pixel.
-// TODO: handle strip properties and ticks.
-
-patternApp.controller('PatternAppCtrl', function ($scope, $interval) {
-  /*
-    $scope.strips = [{
-        'name': 'Party Scarf Strip',
-        'numPixels': 48,
-        'pixelSize': 1,
-        'layout': 'linear',
-        'startSide': 'left'
-    }];
-
-    $scope.strips.map(function (strip) {
-        strip.pixels = []
-        for (var i = 0; i < strip.numPixels; i++) {
-            strip.pixels.push(jQuery.Color(0, 0, 0));
-        }
-    })
-
-    $scope.animate = function (elapsedMs) {
-        angular.forEach($scope.strips, function (strip, stripNo) {
-            angular.forEach(strip.pixels, function (pixel, pixelNo) {
-                strip.pixels[pixelNo] = $scope.pattern(elapsedMs, pixelNo, strip.pixels.length, $scope.registers);
-            });
-        });
-    };
-
-    $scope.setRainbowPattern = function () {
-        $scope.pattern = $scope.rainbows;
-    };
-
-    $scope.setFlashPattern = function () {
-        $scope.pattern = $scope.flash;
-    };
-
-    $scope.R = [0, 0, 0, 0, 0, 0, 0, 0];
-    $scope.currentStrip = null;
-    $scope.currentPixelNo = 0;
-
-    $scope.ioAddrs = {
-        '/ticks': function () {
-            return new Date;
-        },
-        '/total_pixels': function () {
-            return $scope.currentStrip.pixels.length;
-        },
-        '/pixel_number': function () {
-            return $scope.currentPixelNo;
-        }
-    };
-    */
-});
-// lightness: 0.5 * (registers.R0 % 2),
-
-// XXX: split out byte code controller from strip controller.
 patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
+  // Contains pre-baked programs from programs.js. At some point in the
+  // future we might pull this in dynamically from server side.
   $scope.programs = $.map(programs, function(value, name) {
     return {name: name, code: value};
   });
+  // Currently picked <option> for the program selection.
   $scope.programToLoad = null;
+  // Data about the program.
   $scope.progData = {
-    asmInput: '//XXX',
+    // Textarea contents - code to be assembled.
+    asmInput: '',
+    // Assembled code, output of pattern_engine.assemble().
     assembled: [],
+    // Maximum code address (PC).
     maxAddress: 0,
+    // Current virtual machine state.
     state: new pattern_engine.State(),
   };
 
+  // Assembly errors, if any.
   $scope.errors = '';
 
-  // TODO: rework this.
+  // Bit array for generating the bytecode table.
   $scope.bits = [];
   for (var i = 31; i >= 0; i--) {
-    $scope.bits.push(i);
+    $scope.bits.push('' + Math.floor(i / 10) + ' ' + (i % 10));
   };
 
-  $scope.pixelStyle = {
-    'background-color': 'black',
-  };
-
+  // For debugging: pixel that was updated most recently.
   $scope.pixel = {
     r: 0, g: 0, b: 0,
     h: 0, s: 0, l: 0,
+    style: {
+      'background-color': 'black',
+    },
   };
 
+  // Assembles the code.
   $scope.assemble = function() {
     $scope.errors = '';
     $scope.reset();
@@ -104,6 +58,7 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     });
   };
 
+  // Resets the interpreter state.
   $scope.reset = function() {
     $scope.stopAnimation();
     $scope.progData.state = new pattern_engine.State();
@@ -116,12 +71,14 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     }
   };
 
+  // Sets S0..S2 registers in program state.
   $scope.setSpecialRegisters = function() {
     $scope.progData.state.s[0] = $scope.strip.currentTick;
     $scope.progData.state.s[1] = $scope.strip.currentPixel;
     $scope.progData.state.s[2] = $scope.strip.pixelCount;
   }
 
+  // Handler passed to patter engine to set pixel color.
   var pixelHandler = {
     setRgb: function(r, g, b) {
       var color = jQuery.Color({
@@ -130,7 +87,7 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
       $scope.strip.pixels[$scope.strip.currentPixel] = color;
       $scope.pixel.r = r; $scope.pixel.g = g; $scope.pixel.b = b;
       $scope.pixel.h = 0; $scope.pixel.s = 0; $scope.pixel.l = 0;
-      $scope.pixelStyle['background-color'] = color;
+      $scope.pixel.style['background-color'] = color;
     },
     setHsl: function(h, s, l) {
       var color = jQuery.Color({
@@ -142,7 +99,7 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
       $scope.strip.pixels[$scope.strip.currentPixel] = color;
       $scope.pixel.r = 0; $scope.pixel.g = 0; $scope.pixel.b = 0;
       $scope.pixel.h = h; $scope.pixel.s = s; $scope.pixel.l = l;
-      $scope.pixelStyle['background-color'] = color;
+      $scope.pixel.style['background-color'] = color;
     },
   };
 
@@ -169,6 +126,8 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     return true;
   };
 
+  // Runs virtual machine for the current pixel. Advances tick
+  // time if we looped back to first pixel.
   $scope.runPixel = function() {
     for (var i = 0; i < 10000; i++) {
       if (!$scope.step()) {
@@ -181,6 +140,7 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     throw new Error('Program did not finish within 10000 cycles.');
   };
 
+  // Runs code for all (remaining) pixels for the current frame.
   $scope.runFrame = function() {
     for (;;) {
       $scope.runPixel();
@@ -190,24 +150,34 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     }
   };
 
+  // Structure describing the strip.
   $scope.strip = {
+    // Number of pixels in the strip.
     pixelCount: 24,
+    // Which pixel is currently being debugged.
     currentPixel: 0,
+    // Simulation time in ticks (milliseconds).
     currentTick: 0,
+    // Array of objects, where each object describes one
+    // pixel and contains CSS style to apply to that pixel.
     pixels: [],
   };
 
+  // Handle for $interval, if animation is running.
   var animation = null;
 
+  // Sets up periodic handler for animation.
   $scope.startAnimation = function() {
       if (animation !== null) {
         return;
       }
+      $scope.assemble();
       animation = $interval(function() {
         $scope.runFrame();
       }, 20);
   };
 
+  // Stops animation, removes the handler.
   $scope.stopAnimation = function() {
     if (animation !== null) {
       $interval.cancel(animation);
@@ -215,15 +185,18 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
     }
   };
 
+  // Loads program selected by the 'programToLoad' picker.
   $scope.loadProgram = function() {
     $scope.reset();
     $scope.progData.asmInput = $scope.programToLoad.code();
     $scope.assemble();
   };
 
+  // When starting, pick and load the first program.
   $scope.programToLoad = $scope.programs[0];
   $scope.loadProgram();
 
+  // And assemble it.
   $scope.assemble();
   $scope.reset();
 });
