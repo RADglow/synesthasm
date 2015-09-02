@@ -115,6 +115,8 @@
         <div class="code">
             <span ng-repeat="inst in progData.assembled | byteCodeNotNull">
                 {{inst.byteCode | toHex}}<span ng-show="!$last">,</span>
+                // {{inst.asm}}
+                <br/>
             </span>
         </div>
     </div>
