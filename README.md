@@ -199,3 +199,7 @@ no_update:
   DIV R0, R0, COUNT
   WHSL R0, 255, 128
 ~~~
+
+# Endianness
+
+TODO: define endianness.

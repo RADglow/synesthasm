@@ -201,8 +201,24 @@ patternApp.controller('BytecodeCtrl', function ($scope, $interval) {
   $scope.reset();
 });
 
-patternApp.filter('getbit', function () {
-    return function (int32, position) {
-        return (int32 & Math.pow(2, position)) >>> position;
-    }
+patternApp.filter('getbit', function() {
+  return function(int32, position) {
+    return (int32 & Math.pow(2, position)) >>> position;
+  }
+});
+
+patternApp.filter('byteCodeNotNull', function() {
+  return function(instructions) {
+    return $.grep(instructions, function(instr) {
+      return instr.byteCode !== null;
+    });
+  };
+});
+
+patternApp.filter('toHex', function() {
+  return function(num) {
+    var hex = parseInt(num, 10).toString(16);
+    var padded = ('00000000' + hex).substring(hex.length);
+    return '0x' + padded;
+  }
 });
