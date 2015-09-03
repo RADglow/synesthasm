@@ -264,7 +264,6 @@ QUnit.test('JMP execute', function(assert) {
   assert.equal(state.pc, 6);
   state = pattern_engine.parseLine('JNE 10').execute(state);
   assert.equal(state.pc, 10);
-  state = pattern_engine.parseLine('CMP 1, 2').execute(state);
   state = pattern_engine.parseLine('JL 15').execute(state);
   assert.equal(state.pc, 15);
   state = pattern_engine.parseLine('JLE 20').execute(state);
@@ -275,6 +274,14 @@ QUnit.test('JMP execute', function(assert) {
   assert.equal(state.pc, 22);
   state = pattern_engine.parseLine('JEQ 25').execute(state);
   assert.equal(state.pc, 23);
+  state.z = 1;
+  state.p = 1;
+  state = pattern_engine.parseLine('JEQ 25').execute(state);
+  assert.equal(state.pc, 25);
+  state = pattern_engine.parseLine('JGE 25').execute(state);
+  assert.equal(state.pc, 25);
+  state = pattern_engine.parseLine('JG 25').execute(state);
+  assert.equal(state.pc, 26);
 });
 
 QUnit.test('JMP toBytecode', function(assert) {
