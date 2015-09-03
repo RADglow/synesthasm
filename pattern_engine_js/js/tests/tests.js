@@ -355,9 +355,13 @@ QUnit.test('assemble', function(assert) {
   assert.equal(assembled[0].asm, 'MOV R0, 0x0 // meh');
   assert.equal(assembled[0].instruction.toString(), 'MOV R0, 0');
   assert.equal(assembled[0].address, 0);
+  assert.equal(assembled[0].byteCode,
+               0b00001000000000100000000000000000);
 
   assert.equal(assembled[1].instruction.address, 3);
   assert.equal(assembled[1].instruction.toString(), 'JMP no_update  // 3');
+  assert.equal(assembled[1].byteCode,
+               0b00010000000000000000000000000011);
 
   assert.strictEqual(assembled[3].instruction, null);
   assert.strictEqual(assembled[3].address, null);

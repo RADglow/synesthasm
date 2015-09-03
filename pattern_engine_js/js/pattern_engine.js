@@ -505,13 +505,16 @@ pattern_engine.assemble = function(text) {
   // Assign addresses to branch instructions that have labels.
   $.each(assembled, function(_, struct) {
     if (struct.instruction &&
-        struct.instruction instanceof pattern_engine.Jmp) {
+        struct.instruction instanceof pattern_engine.Jmp &&
+        struct.instruction.label !== null) {
       var label = struct.instruction.label;
       if (!(label in labelsToAddresses)) {
         throw new Error('Label not found: ' + label);
       }
       var address = labelsToAddresses[label];
       struct.instruction.address = address;
+      // Reassign bytecode as the address changed.
+      struct.byteCode = struct.instruction.toBytecode();
     }
   });
   return assembled;
