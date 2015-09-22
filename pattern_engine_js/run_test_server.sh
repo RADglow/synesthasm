@@ -6,5 +6,5 @@ if [ "$(uname)" == "Darwin" ]; then
 else
   echo "Open http://localhost:8000/js/tests/qunit.html in your browser."
 fi
-cd ../..
+cd -- "${0%/*}"
 python -m SimpleHTTPServer
